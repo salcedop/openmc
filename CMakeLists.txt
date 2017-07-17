@@ -107,8 +107,8 @@ if(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
   endif()
 
   # GCC compiler options
-  list(APPEND f90flags -cpp -std=f2008 -fbacktrace -O2)
-  list(APPEND cflags -cpp -std=c99 -O2)
+  list(APPEND f90flags -cpp -std=f2008 -fbacktrace -O2 -g)
+  list(APPEND cflags -cpp -std=c99 -O2 -g)
   if(debug)
     list(REMOVE_ITEM f90flags -O2)
     list(REMOVE_ITEM cflags -O2)

@@ -17,7 +17,7 @@ module dict_header
 
   implicit none
 
-  integer, parameter, private :: HASH_SIZE       = 4993
+  integer, parameter, private :: HASH_SIZE       = 500
   integer, parameter, private :: HASH_MULTIPLIER = 31
   integer, parameter, private :: DICT_NULL       = -huge(0)
   integer, parameter          :: DICT_KEY_LENGTH = 255

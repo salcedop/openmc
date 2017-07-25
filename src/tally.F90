@@ -4089,36 +4089,36 @@ contains
     real(8) :: dummy  ! temporary receive buffer for non-root reduces
     type(TallyObject), pointer :: t
     
-    !do i = 1, active_tallies % size()
-    !  t => tallies(active_tallies % get_item(i))
+    do i = 1, active_tallies % size()
+      t => tallies(active_tallies % get_item(i))
 
-     ! m = t % total_score_bins
-     ! n = t % total_filter_bins
-     ! n_bins = m*n
+       m = t % total_score_bins
+       n = t % total_filter_bins
+       n_bins = m*n
 
-     ! allocate(tally_temp(m,n))
+       allocate(tally_temp(m,n))
 
-      !tally_temp = t % results(RESULT_VALUE,:,:)
+        tally_temp = t % results(RESULT_VALUE,:,:)
 
-      !if (master) then
-        ! The MPI_IN_PLACE specifier allows the master to copy values into
-        ! a receive buffer without having a temporary variable
-       ! call MPI_REDUCE(MPI_IN_PLACE, tally_temp, n_bins, MPI_REAL8, &
-        !     MPI_SUM, 0, mpi_intracomm, mpi_err)
+        if (master) then
+         The MPI_IN_PLACE specifier allows the master to copy values into
+         a receive buffer without having a temporary variable
+         call MPI_REDUCE(MPI_IN_PLACE, tally_temp, n_bins, MPI_REAL8, &
+             MPI_SUM, 0, mpi_intracomm, mpi_err)
 
-        ! Transfer values to value on master
-       ! t % results(RESULT_VALUE,:,:) = tally_temp
-     ! else
-        ! Receive buffer not significant at other processors
-      !  call MPI_REDUCE(tally_temp, dummy, n_bins, MPI_REAL8, &
-       !      MPI_SUM, 0, mpi_intracomm, mpi_err)
+         Transfer values to value on master
+        t % results(RESULT_VALUE,:,:) = tally_temp
+       else
+         Receive buffer not significant at other processors
+        call MPI_REDUCE(tally_temp, dummy, n_bins, MPI_REAL8, &
+             MPI_SUM, 0, mpi_intracomm, mpi_err)
 
-        ! Reset value on other processors
-        !t % results(RESULT_VALUE,:,:) = ZERO
-     ! end if
+         Reset value on other processors
+        t % results(RESULT_VALUE,:,:) = ZERO
+      end if
 
-    !  deallocate(tally_temp)
-    !end do
+      deallocate(tally_temp)
+    end do
 
     ! Copy global tallies into array to be reduced
     global_temp = global_tallies(RESULT_VALUE, :)

@@ -4089,8 +4089,9 @@ contains
     real(8) :: dummy  ! temporary receive buffer for non-root reduces
     type(TallyObject), pointer :: t
     
+
     do i = 1, active_tallies % size()
-      t => tallies(active_tallies % get_item(i))
+       t => tallies(active_tallies % get_item(i))
 
        m = t % total_score_bins
        n = t % total_filter_bins
@@ -4098,22 +4099,22 @@ contains
 
        allocate(tally_temp(m,n))
 
-        tally_temp = t % results(RESULT_VALUE,:,:)
+       tally_temp = t % results(RESULT_VALUE,:,:)
 
-        if (master) then
-         The MPI_IN_PLACE specifier allows the master to copy values into
-         a receive buffer without having a temporary variable
+       if (master) then
+         !The MPI_IN_PLACE specifier allows the master to copy values into
+         !a receive buffer without having a temporary variable
          call MPI_REDUCE(MPI_IN_PLACE, tally_temp, n_bins, MPI_REAL8, &
              MPI_SUM, 0, mpi_intracomm, mpi_err)
 
-         Transfer values to value on master
+         !Transfer values to value on master
         t % results(RESULT_VALUE,:,:) = tally_temp
        else
-         Receive buffer not significant at other processors
+         !Receive buffer not significant at other processors
         call MPI_REDUCE(tally_temp, dummy, n_bins, MPI_REAL8, &
              MPI_SUM, 0, mpi_intracomm, mpi_err)
 
-         Reset value on other processors
+         !Reset value on other processors
         t % results(RESULT_VALUE,:,:) = ZERO
       end if
 

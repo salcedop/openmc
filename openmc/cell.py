@@ -103,7 +103,8 @@ class Cell(object):
         self._rotation_matrix = None
         self._temperature = None
         self._translation = None
-        self._paths = []
+        self._paths = None
+        self._num_instances = None
         self._volume = None
         self._atoms = None
 
@@ -214,7 +215,7 @@ class Cell(object):
 
     @property
     def paths(self):
-        if not self._paths:
+        if self._paths is None:
             raise ValueError('Cell instance paths have not been determined. '
                              'Call the Geometry.determine_paths() method.')
         return self._paths
@@ -229,7 +230,11 @@ class Cell(object):
 
     @property
     def num_instances(self):
-        return len(self.paths)
+        if self._num_instances is None:
+            raise ValueError(
+                'Number of cell instances have not been determined. Call the '
+                'Geometry.determine_paths() method.')
+        return self._num_instances
 
     @id.setter
     def id(self, cell_id):
@@ -527,8 +532,17 @@ class Cell(object):
 
         # If no nemoize'd clone exists, instantiate one
         if self not in memo:
+            # Temporarily remove paths
+            paths = self._paths
+            self._paths = None
+
             clone = deepcopy(self)
             clone.id = None
+            clone._num_instances = None
+
+            # Restore paths on original instance
+            self._paths = paths
+
             if self.region is not None:
                 clone.region = self.region.clone(memo)
             if self.fill is not None:
@@ -542,7 +556,7 @@ class Cell(object):
             memo[self] = clone
 
         return memo[self]
-    
+
     def create_xml_subelement(self, xml_element):
         element = ET.Element("cell")
         element.set("id", str(self.id))

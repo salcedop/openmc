@@ -1,0 +1,9 @@
+
+[remote "origin"]
+	url = git@github.com:mit-crpg/openmc.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "develop"]
+	remote = origin
+	merge = refs/heads/develop
+[submodule "src/xml/fox"]
+	url = https://github.com/mit-crpg/fox.git

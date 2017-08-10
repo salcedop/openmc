@@ -97,7 +97,8 @@ class Material(object):
         self._density = None
         self._density_units = ''
         self._depletable = False
-        self._paths = []
+        self._paths = None
+        self._num_instances = None
         self._volume = None
         self._atoms = {}
 
@@ -209,14 +210,18 @@ class Material(object):
 
     @property
     def paths(self):
-        if not self._paths:
+        if self._paths is None:
             raise ValueError('Material instance paths have not been determined. '
                              'Call the Geometry.determine_paths() method.')
         return self._paths
 
     @property
     def num_instances(self):
-        return len(self.paths)
+        if self._num_instances is None:
+            raise ValueError(
+                'Number of material instances have not been determined. Call '
+                'the Geometry.determine_paths() method.')
+        return self._num_instances
 
     @property
     def elements(self):
@@ -298,11 +303,6 @@ class Material(object):
             cv.check_type('material volume', volume, Real)
         self._volume = volume
 
-    @num_instances.setter
-    def num_instances(self, num_instances):
-        cv.check_type('num_instances', num_instances, Integral)
-        self._num_instances = num_instances
-
     @classmethod
     def from_hdf5(cls, group):
         """Create material from HDF5 group
@@ -380,7 +380,7 @@ class Material(object):
         cv.check_value('density units', units, DENSITY_UNITS)
         self._density_units = units
 
-        if units is 'sum':
+        if units == 'sum':
             if density is not None:
                 msg = 'Density "{}" for Material ID="{}" is ignored ' \
                       'because the unit is "sum"'.format(density, self.id)
@@ -820,8 +820,18 @@ class Material(object):
 
         # If no nemoize'd clone exists, instantiate one
         if self not in memo:
+            # Temporarily remove paths -- this is done so that when the clone is
+            # made, it doesn't create a copy of the paths (which are specific to
+            # an instance)
+            paths = self._paths
+            self._paths = None
+
             clone = deepcopy(self)
             clone.id = None
+            clone._num_instances = None
+
+            # Restore paths on original instance
+            self._paths = paths
 
             # Memoize the clone
             memo[self] = clone

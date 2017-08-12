@@ -2501,7 +2501,7 @@ contains
         if (.not. nuclide_dict % has_key(to_lower(name))) then
           index_nuclide    = index_nuclide + 1
           mat % nuclide(j) = index_nuclide
-          
+
           call nuclide_dict % add_key(to_lower(name), index_nuclide)
         else
           mat % nuclide(j) = nuclide_dict % get_key(to_lower(name))
@@ -2606,16 +2606,6 @@ contains
     ! Set total number of nuclides and S(a,b) tables
     n_nuclides_total = index_nuclide
     n_sab_tables     = index_sab
-
-
-    do i=1, n_materials
-      mat => materials(i)
-      allocate(mat % mat_nuclide_list(n_nuclides_total))
-      mat % mat_nuclide_list(:) = 0
-      do j=1, mat % n_nuclides
-        mat % mat_nuclide_list(mat % nuclide(j))=j
-      end do
-    end do
 
     ! Close materials XML file
     call doc % clear()

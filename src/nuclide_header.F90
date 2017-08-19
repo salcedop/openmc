@@ -43,6 +43,10 @@ module nuclide_header
     real(8), allocatable :: nu_fission(:) ! neutron production
     real(8), allocatable :: absorption(:) ! absorption (MT > 100)
     real(8), allocatable :: heating(:)    ! heating
+    real(8), allocatable :: ngamma(:) 
+    real(8), allocatable :: n2n(:)  
+    real(8), allocatable :: n3n(:)
+    real(8), allocatable :: n4n(:)
   end type SumXS
 
   type :: Nuclide
@@ -87,9 +91,12 @@ module nuclide_header
 
     ! Reactions
     type(Reaction), allocatable :: reactions(:)
-    type(DictIntInt) :: reaction_index ! map MT values to index in reactions
+    !type(DictIntInt) :: reaction_index ! map MT values to index in reactions
                                        ! array; used at tally-time
 
+
+
+    integer, allocatable :: rxn_index_MT(:)
     ! Fission energy release
     class(Function1D), allocatable :: fission_q_prompt ! prompt neutrons, gammas
     class(Function1D), allocatable :: fission_q_recov  ! neutrons, gammas, betas
@@ -116,7 +123,10 @@ module nuclide_header
     real(8) :: absorption      ! microscopic absorption xs
     real(8) :: fission         ! microscopic fission xs
     real(8) :: nu_fission      ! microscopic production xs
-
+    real(8) :: n2n
+    real(8) :: ngamma
+    real(8) :: n3n
+    real(8) :: n4n
     ! Information for S(a,b) use
     integer :: index_sab          ! index in sab_tables (zero means no table)
     integer :: last_index_sab = 0 ! index in sab_tables last used by this nuclide
@@ -142,6 +152,10 @@ module nuclide_header
     real(8) :: absorption    ! macroscopic absorption xs
     real(8) :: fission       ! macroscopic fission xs
     real(8) :: nu_fission    ! macroscopic production xs
+    real(8) :: n2n
+    real(8) :: n3n
+    real(8) :: n4n
+    real(8) :: ngamma
   end type MaterialMacroXS
 
 !===============================================================================
@@ -472,6 +486,8 @@ module nuclide_header
 
     n_temperature = size(this % kTs)
     allocate(this % sum_xs(n_temperature))
+    allocate(this % rxn_index_MT(1000))
+    this % rxn_index_MT(:)=0
 
     do i = 1, n_temperature
       ! Allocate and initialize derived cross sections
@@ -492,8 +508,8 @@ module nuclide_header
 
     do i = 1, size(this % reactions)
       call MTs % push_back(this % reactions(i) % MT)
-      call this % reaction_index % add_key(this % reactions(i) % MT, i)
-
+      !call this % reaction_index % add_key(this % reactions(i) % MT, i)
+      this % rxn_index_MT(this % reactions(i) % MT) = i
       associate (rx => this % reactions(i))
         ! Skip total inelastic level scattering, gas production cross sections
         ! (MT=200+), etc.

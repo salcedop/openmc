@@ -254,8 +254,7 @@ contains
           ! multiplicities of one.
           score = p % last_wgt * flux
         else
-          m = nuclides(p % event_nuclide) % reaction_index % &
-               get_key(p % event_MT)
+          m = nuclides(p % event_nuclide) % rxn_index_MT(p % event_MT)
 
           ! Get yield and apply to score
           associate (rxn => nuclides(p % event_nuclide) % reactions(m))
@@ -281,8 +280,7 @@ contains
           ! of one.
           score = p % last_wgt * flux
         else
-          m = nuclides(p%event_nuclide)%reaction_index% &
-               get_key(p % event_MT)
+          m = nuclides(p%event_nuclide)%rxn_index_MT(p % event_MT)
 
           ! Get yield and apply to score
           associate (rxn => nuclides(p % event_nuclide) % reactions(m))
@@ -308,8 +306,7 @@ contains
           ! of one.
           score = p % last_wgt * flux
         else
-          m = nuclides(p%event_nuclide)%reaction_index% &
-               get_key(p % event_MT)
+          m = nuclides(p%event_nuclide)%rxn_index_MT(p % event_MT)
 
           ! Get yield and apply to score
           associate (rxn => nuclides(p%event_nuclide)%reactions(m))
@@ -1146,6 +1143,154 @@ contains
           end if
         end if
 
+
+      case (SCORE_N2N)
+
+            score = ZERO
+
+            if (i_nuclide > 0) then
+              !if (nuclides(i_nuclide)%reaction_index%has_key(score_bin)) then
+                !m = nuclides(i_nuclide)%reaction_index%get_key(score_bin)
+
+                ! Retrieve temperature and energy grid index and interpolation
+                ! factor
+                !i_temp = micro_xs(i_nuclide) % index_temp
+                !if (i_temp > 0) then
+                  !i_energy = micro_xs(i_nuclide) % index_grid
+                  !f = micro_xs(i_nuclide) % interp_factor
+
+                  !associate (xs => nuclides(i_nuclide) % reactions(m) % xs(i_temp))
+                    !if (i_energy >= xs % threshold) then
+              score = micro_xs(i_nuclide) % n2n * atom_density * flux
+                
+              
+                !else
+                  ! This block is reached if multipole is turned on and we're in
+                  ! the resolved range. For (n,gamma), use absorption -
+                  ! fission. For everything else, assume it's zero.
+                
+                 ! score = ZERO
+                
+            else
+              do l = 1, materials(p % material) % n_nuclides
+                ! Get atom density
+                atom_density_ = materials(p % material) % atom_density(l)
+
+                ! Get index in nuclides array
+                i_nuc = materials(p % material) % nuclide(l)
+
+                score = score + micro_xs(i_nuc) % n2n * atom_density_ * flux
+              end do
+            end if
+
+
+        case (SCORE_N3N)
+
+            score = ZERO
+
+            if (i_nuclide > 0) then
+              !if (nuclides(i_nuclide)%reaction_index%has_key(score_bin)) then
+                !m = nuclides(i_nuclide)%reaction_index%get_key(score_bin)
+
+                ! Retrieve temperature and energy grid index and interpolation
+                ! factor
+                !i_temp = micro_xs(i_nuclide) % index_temp
+                !if (i_temp > 0) then
+                  !i_energy = micro_xs(i_nuclide) % index_grid
+                  !f = micro_xs(i_nuclide) % interp_factor
+
+                  !associate (xs => nuclides(i_nuclide) % reactions(m) %
+                  !xs(i_temp))
+                    !if (i_energy >= xs % threshold) then
+              score = micro_xs(i_nuclide) % n3n * atom_density * flux
+
+
+                !else
+                  ! This block is reached if multipole is turned on and we're in
+                  ! the resolved range. For (n,gamma), use absorption -
+                  ! fission. For everything else, assume it's zero.
+
+                 ! score = ZERO
+
+            else
+              do l = 1, materials(p % material) % n_nuclides
+                ! Get atom density
+                atom_density_ = materials(p % material) % atom_density(l)
+
+                ! Get index in nuclides array
+                i_nuc = materials(p % material) % nuclide(l)
+
+                score = score + micro_xs(i_nuc) % n3n * atom_density_ * flux
+              end do
+            end if
+
+
+          case (SCORE_N4N)
+
+            score = ZERO
+
+            if (i_nuclide > 0) then
+              !if (nuclides(i_nuclide)%reaction_index%has_key(score_bin)) then
+                !m = nuclides(i_nuclide)%reaction_index%get_key(score_bin)
+
+                ! Retrieve temperature and energy grid index and interpolation
+                ! factor
+                !i_temp = micro_xs(i_nuclide) % index_temp
+                !if (i_temp > 0) then
+                  !i_energy = micro_xs(i_nuclide) % index_grid
+                  !f = micro_xs(i_nuclide) % interp_factor
+
+                  !associate (xs => nuclides(i_nuclide) % reactions(m) %
+                  !xs(i_temp))
+                    !if (i_energy >= xs % threshold) then
+              score = micro_xs(i_nuclide) % n4n * atom_density * flux
+
+
+                !else
+                  ! This block is reached if multipole is turned on and we're in
+                  ! the resolved range. For (n,gamma), use absorption -
+                  ! fission. For everything else, assume it's zero.
+
+                 ! score = ZERO
+
+            else
+              do l = 1, materials(p % material) % n_nuclides
+                ! Get atom density
+                atom_density_ = materials(p % material) % atom_density(l)
+
+                ! Get index in nuclides array
+                i_nuc = materials(p % material) % nuclide(l)
+
+                score = score + micro_xs(i_nuc) % n4n * atom_density_ * flux
+              end do
+            end if
+
+
+
+      case (SCORE_NGAMMA)
+        if (t % estimator == ESTIMATOR_ANALOG) then
+          if (survival_biasing) then
+            ! No absorption events actually occur if survival biasing is on --
+            ! just use weight absorbed in survival biasing
+            score = p % absorb_wgt * flux
+          else
+            ! Skip any event where the particle wasn't absorbed
+            if (p % event == EVENT_SCATTER) cycle SCORE_LOOP
+            ! All fission and absorption events will contribute here, so we
+            ! can just use the particle's weight entering the collision
+            score = p % last_wgt * flux
+          end if
+
+        else
+          if (i_nuclide > 0) then
+            score = micro_xs(i_nuclide) % ngamma * atom_density * flux
+          else
+            score = material_xs % ngamma * flux
+          end if
+        end if
+
+
+    
       case default
         if (t % estimator == ESTIMATOR_ANALOG) then
           ! Any other score is assumed to be a MT number. Thus, we just need
@@ -1163,9 +1308,9 @@ contains
             score = ZERO
 
             if (i_nuclide > 0) then
-              if (nuclides(i_nuclide)%reaction_index%has_key(score_bin)) then
-                m = nuclides(i_nuclide)%reaction_index%get_key(score_bin)
-
+              !if (nuclides(i_nuclide)%reaction_index%has_key(score_bin)) then
+                m = nuclides(i_nuclide) % rxn_index_MT(score_bin)
+              
                 ! Retrieve temperature and energy grid index and interpolation
                 ! factor
                 i_temp = micro_xs(i_nuclide) % index_temp
@@ -1190,7 +1335,7 @@ contains
                   else
                     score = ZERO
                   end if
-                end if
+                
               end if
 
             else
@@ -1201,8 +1346,8 @@ contains
                 ! Get index in nuclides array
                 i_nuc = materials(p % material) % nuclide(l)
 
-                if (nuclides(i_nuc)%reaction_index%has_key(score_bin)) then
-                  m = nuclides(i_nuc)%reaction_index%get_key(score_bin)
+               ! if (nuclides(i_nuc)%reaction_index%has_key(score_bin)) then
+                  m = nuclides(i_nuc)%rxn_index_MT(score_bin)
 
                   ! Retrieve temperature and energy grid index and interpolation
                   ! factor
@@ -1228,7 +1373,6 @@ contains
                     else
                       score = ZERO
                     end if
-                  end if
                 end if
               end do
             end if

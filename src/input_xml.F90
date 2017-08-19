@@ -3685,14 +3685,14 @@ contains
             call fatal_error("n1n score no longer supported for tallies, &
                  &please remove")
           case ('n2n', '(n,2n)')
-            t % score_bins(j) = N_2N
-
+            t % score_bins(j) = SCORE_N2N
+            t % has_threshold_rxn = .true.
           case ('n3n', '(n,3n)')
-            t % score_bins(j) = N_3N
-
+            t % score_bins(j) = SCORE_N3N
+            t % has_threshold_rxn = .true.
           case ('n4n', '(n,4n)')
-            t % score_bins(j) = N_4N
-
+            t % score_bins(j) = SCORE_N4N
+            t % has_threshold_rxn = .true.
           case ('absorption')
             t % score_bins(j) = SCORE_ABSORPTION
             if (t % find_filter(FILTER_ENERGYOUT) > 0) then
@@ -3827,7 +3827,7 @@ contains
           case ('(n,nc)')
             t % score_bins(j) = N_NC
           case ('(n,gamma)')
-            t % score_bins(j) = N_GAMMA
+            t % score_bins(j) = SCORE_NGAMMA
           case ('(n,p)')
             t % score_bins(j) = N_P
           case ('(n,d)')

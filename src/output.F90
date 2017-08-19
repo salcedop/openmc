@@ -732,7 +732,8 @@ contains
     score_names(abs(SCORE_INVERSE_VELOCITY))   = "Flux-Weighted Inverse Velocity"
     score_names(abs(SCORE_FISS_Q_PROMPT))      = "Prompt fission power"
     score_names(abs(SCORE_FISS_Q_RECOV))       = "Recoverable fission power"
-
+    score_names(abs(SCORE_N2N))                 = "N2N"
+    score_names(abs(SCORE_NGAMMA))              = "n_gamma"
     ! Create filename for tally output
     filename = trim(path_output) // "tallies.out"
 

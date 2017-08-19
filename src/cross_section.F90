@@ -15,7 +15,7 @@ module cross_section
   use particle_header,  only: Particle
   use random_lcg,       only: prn, future_prn, prn_set_stream
   use sab_header,       only: SAlphaBeta
-
+  use endf              
   implicit none
 
 contains
@@ -44,6 +44,10 @@ contains
     material_xs % absorption     = ZERO
     material_xs % fission        = ZERO
     material_xs % nu_fission     = ZERO
+    material_xs % n2n            = ZERO
+    material_xs % n3n            = ZERO
+    material_xs % n4n            = ZERO
+    material_xs % ngamma         = ZERO
 
     ! Exit subroutine if material is void
     if (p % material == MATERIAL_VOID) return
@@ -93,9 +97,9 @@ contains
         ! Calculate microscopic cross section for this nuclide
         if (p % E /= micro_xs(i_nuclide) % last_E &
              .or. p % sqrtkT /= micro_xs(i_nuclide) % last_sqrtkT) then
-          call calculate_nuclide_xs(i_nuclide, i_sab, p % E, i_grid, p % sqrtkT)
+          call calculate_nuclide_xs(p,i_nuclide, i_sab, p % E, i_grid, p % sqrtkT)
         else if (i_sab /= micro_xs(i_nuclide) % last_index_sab) then
-          call calculate_nuclide_xs(i_nuclide, i_sab, p % E, i_grid, p % sqrtkT)
+          call calculate_nuclide_xs(p,i_nuclide, i_sab, p % E, i_grid, p % sqrtkT)
         end if
 
         ! ========================================================================
@@ -123,6 +127,27 @@ contains
         ! Add contributions to material macroscopic nu-fission cross section
         material_xs % nu_fission = material_xs % nu_fission + &
              atom_density * micro_xs(i_nuclide) % nu_fission
+
+
+       ! Add contributions to material macroscopic n2n cross section
+        material_xs % n2n = material_xs % n2n + &
+             atom_density * micro_xs(i_nuclide) % n2n
+
+
+       ! Add contributions to material macroscopic ngamma cross section
+        material_xs % ngamma = material_xs % ngamma + &
+             atom_density * micro_xs(i_nuclide) % ngamma
+      
+      ! Add contributions to material macroscopic n3n cross section
+        material_xs % n3n = material_xs % n3n + &
+             atom_density * micro_xs(i_nuclide) % n3n
+
+        ! Add contributions to material macroscopic n4n cross section
+        material_xs % n4n = material_xs % n4n + &
+             atom_density * micro_xs(i_nuclide) % n4n
+
+
+
       end do
     end associate
 
@@ -133,7 +158,8 @@ contains
 ! given index in the nuclides array at the energy of the given particle
 !===============================================================================
 
-  subroutine calculate_nuclide_xs(i_nuclide, i_sab, E, i_log_union, sqrtkT)
+  subroutine calculate_nuclide_xs(p,i_nuclide, i_sab, E, i_log_union, sqrtkT)
+    type(Particle), intent(inout) :: p
     integer, intent(in) :: i_nuclide ! index into nuclides array
     integer, intent(in) :: i_sab     ! index into sab_tables array
     real(8), intent(in) :: E         ! energy
@@ -149,7 +175,9 @@ contains
     real(8) :: f      ! interp factor on nuclide energy grid
     real(8) :: kT     ! temperature in eV
     real(8) :: sigT, sigA, sigF ! Intermediate multipole variables
-
+    integer     :: rxn
+    type(TallyObject) :: t
+    character(15) :: threshold_rxn_type
     associate (nuc => nuclides(i_nuclide))
       ! Check to see if there is multipole data present at this energy
       use_mp = .false.
@@ -194,6 +222,8 @@ contains
       else
         ! Find the appropriate temperature index.
         kT = sqrtkT**2
+      
+        !rxn = nuc % rxn_index_MT(p % event_MT)
         select case (temperature_method)
         case (TEMPERATURE_NEAREST)
           i_temp = minloc(abs(nuclides(i_nuclide) % kTs - kT), dim=1)
@@ -239,12 +269,17 @@ contains
                (grid % energy(i_grid + 1) - grid % energy(i_grid))
 
           micro_xs(i_nuclide) % index_temp    = i_temp
+
           micro_xs(i_nuclide) % index_grid    = i_grid
+
           micro_xs(i_nuclide) % interp_factor = f
 
           ! Initialize nuclide cross-sections to zero
           micro_xs(i_nuclide) % fission    = ZERO
           micro_xs(i_nuclide) % nu_fission = ZERO
+          micro_xs(i_nuclide) % n2n        = ZERO
+          micro_xs(i_nuclide) % n3n        = ZERO
+          micro_xs(i_nuclide) % n4n        = ZERO
 
           ! Calculate microscopic nuclide total cross section
           micro_xs(i_nuclide) % total = (ONE - f) * xs % total(i_grid) &
@@ -257,18 +292,56 @@ contains
           ! Calculate microscopic nuclide absorption cross section
           micro_xs(i_nuclide) % absorption = (ONE - f) * xs % absorption( &
                i_grid) + f * xs % absorption(i_grid + 1)
-
+          
           if (nuc % fissionable) then
             ! Calculate microscopic nuclide total cross section
             micro_xs(i_nuclide) % fission = (ONE - f) * xs % fission(i_grid) &
                  + f * xs % fission(i_grid + 1)
 
             ! Calculate microscopic nuclide nu-fission cross section
-            micro_xs(i_nuclide) % nu_fission = (ONE - f) * xs % nu_fission( &
+            micro_xs(i_nuclide) % nu_fission = (ONE - f) * xs % nu_fission(&
                  i_grid) + f * xs % nu_fission(i_grid + 1)
+
           end if
-        end associate
-      end if
+
+          micro_xs(i_nuclide) % ngamma = (micro_xs(i_nuclide) % absorption - &
+                 micro_xs(i_nuclide) % fission)
+         if (t % has_threshold_rxn) then
+         !if (nuclides(i_nuclide)%reaction_index%has_key(p % event_MT)) the
+           rxn = nuclides(i_nuclide) % rxn_index_MT(p % event_MT)
+           associate(xs_threshold => nuc % reactions(rxn) % xs(i_temp))
+        !end if  
+         threshold_rxn_type = reaction_name(p % event_MT)
+          if (threshold_rxn_type == 'n2n') then 
+            if (i_grid >= xs_threshold % threshold) then
+              micro_xs(i_nuclide) % n2n = (ONE - f) * xs_threshold % value(i_grid - xs_threshold & 
+              % threshold + 1) + f * xs_threshold % value(i_grid - xs_threshold &
+              % threshold + 2)
+            end if
+          end if
+          if (threshold_rxn_type == 'n3n') then
+            if (i_grid >= xs_threshold % threshold) then
+              micro_xs(i_nuclide) % n3n = (ONE - f) * xs_threshold % value(i_grid - xs_threshold &
+              % threshold + 1) + f * xs_threshold % value(i_grid - xs_threshold &
+              % threshold + 2)
+            end if
+          end if
+
+
+      if (threshold_rxn_type == 'n4n') then
+            if (i_grid >= xs_threshold % threshold) then
+              micro_xs(i_nuclide) % n4n = (ONE - f) * xs_threshold % value(i_grid - xs_threshold & 
+              % threshold + 1) + f * xs_threshold % value(i_grid - xs_threshold &
+              % threshold + 2)
+            end if
+          end if
+
+
+            end associate
+          
+          end if
+          end associate
+        end if
 
       ! Initialize sab treatment to false
       micro_xs(i_nuclide) % index_sab   = NONE

@@ -66,6 +66,15 @@ contains
       string = "fission-q-prompt"
     case (SCORE_FISS_Q_RECOV)
       string = "fission-q-recoverable"
+    case (SCORE_N2N)
+      string = "n2n"
+    case (SCORE_N3N)
+      string = "n3n"
+    case (SCORE_N4N)
+      string = "n4n"
+    case (SCORE_NGAMMA)
+      string = "ngamma"
+    
 
     ! Normal ENDF-based reactions
     case (TOTAL_XS)
@@ -76,12 +85,12 @@ contains
       string = '(n,level)'
     case (N_2ND)
       string = '(n,2nd)'
-    case (N_2N)
-      string = '(n,2n)'
-    case (N_3N)
-      string = '(n,3n)'
-    case (N_FISSION)
-      string = '(n,fission)'
+    !case (N_2N)
+      !string = '(n,2n)'
+    !case (N_3N)
+      !string = '(n,3n)'
+    !case (N_FISSION)
+     ! string = '(n,fission)'
     case (N_F)
       string = '(n,f)'
     case (N_NF)
@@ -130,8 +139,8 @@ contains
       string = '(n,nc)'
     case (N_DISAPPEAR)
       string = '(n,disappear)'
-    case (N_GAMMA)
-      string = '(n,gamma)'
+    !case (N_GAMMA)
+     ! string = '(n,gamma)'
     case (N_P)
       string = '(n,p)'
     case (N_D)

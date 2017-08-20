@@ -10,6 +10,7 @@ module material_header
     integer              :: id              ! unique identifier
     character(len=104)   :: name = ""       ! User-defined name
     integer              :: n_nuclides      ! number of nuclides
+    integer,allocatable              :: mat_nuclide_list(:)
     integer, allocatable :: nuclide(:)      ! index in nuclides array
     real(8)              :: density         ! total atom density in atom/b-cm
     real(8), allocatable :: atom_density(:) ! nuclide atom density in atom/b-cm

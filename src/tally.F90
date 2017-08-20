@@ -1308,7 +1308,7 @@ contains
             score = ZERO
 
             if (i_nuclide > 0) then
-              !if (nuclides(i_nuclide)%reaction_index%has_key(score_bin)) then
+              if (nuclides(i_nuclide)%rxn_index_MT(score_bin) /= 0) then
                 m = nuclides(i_nuclide) % rxn_index_MT(score_bin)
               
                 ! Retrieve temperature and energy grid index and interpolation
@@ -1335,7 +1335,7 @@ contains
                   else
                     score = ZERO
                   end if
-                
+                end if
               end if
 
             else
@@ -1346,7 +1346,7 @@ contains
                 ! Get index in nuclides array
                 i_nuc = materials(p % material) % nuclide(l)
 
-               ! if (nuclides(i_nuc)%reaction_index%has_key(score_bin)) then
+                if (nuclides(i_nuc)%rxn_index_MT(score_bin) /= 0) then
                   m = nuclides(i_nuc)%rxn_index_MT(score_bin)
 
                   ! Retrieve temperature and energy grid index and interpolation
@@ -1374,6 +1374,7 @@ contains
                       score = ZERO
                     end if
                 end if
+              end if
               end do
             end if
 
@@ -2833,7 +2834,7 @@ contains
 
     type(Particle), intent(in) :: p
     real(8),        intent(in) :: distance
-
+    integer :: check_value
     integer :: i
     integer :: i_tally
     integer :: i_filt
@@ -2896,21 +2897,13 @@ contains
               if (p % material /= MATERIAL_VOID) then
                 ! Get pointer to current material
                 mat => materials(p % material)
+                check_value= mat % mat_nuclide_list(i_nuclide)
 
-                ! Determine if nuclide is actually in material
-                NUCLIDE_MAT_LOOP: do j = 1, mat % n_nuclides
-                  ! If index of nuclide matches the j-th nuclide listed in the
-                  ! material, break out of the loop
-                  if (i_nuclide == mat % nuclide(j)) exit
+                if (check_value == 0) then
+                  cycle NUCLIDE_BIN_LOOP
+                end if
 
-                  ! If we've reached the last nuclide in the material, it means
-                  ! the specified nuclide to be tallied is not in this material
-                  if (j == mat % n_nuclides) then
-                    cycle NUCLIDE_BIN_LOOP
-                  end if
-                end do NUCLIDE_MAT_LOOP
-
-                atom_density = mat % atom_density(j)
+                atom_density = mat % atom_density(check_value)
               else
                 atom_density = ZERO
               end if

@@ -9,7 +9,7 @@ module constants
 
   ! OpenMC major, minor, and release numbers
   integer, parameter :: VERSION_MAJOR   = 0
-  integer, parameter :: VERSION_MINOR   = 8
+  integer, parameter :: VERSION_MINOR   = 10
   integer, parameter :: VERSION_RELEASE = 0
   integer, parameter :: &
        VERSION(3) = [VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE]
@@ -18,7 +18,7 @@ module constants
   integer, parameter :: HDF5_VERSION(2) = [1, 0]
 
   ! Version numbers for binary files
-  integer, parameter :: VERSION_STATEPOINT(2)       = [16, 0]
+  integer, parameter :: VERSION_STATEPOINT(2)       = [17, 0]
   integer, parameter :: VERSION_PARTICLE_RESTART(2) = [2, 0]
   integer, parameter :: VERSION_TRACK(2)            = [2, 0]
   integer, parameter :: VERSION_SUMMARY(2)          = [5, 0]
@@ -35,17 +35,16 @@ module constants
 
   ! Monoatomic ideal-gas scattering treatment threshold
   real(8), parameter :: FREE_GAS_THRESHOLD = 400.0_8
-  
-  ! Total size of buffer elements, buffer nuclides and buffer reactions
-  integer, parameter :: BUFFER_SIZE = 50
-  integer, parameter :: BUFFER_NUCLIDE = 300
-  integer, parameter :: BUFFER_REACTIONS = 7 
 
   ! Significance level for confidence intervals
   real(8), parameter :: CONFIDENCE_LEVEL = 0.95_8
 
   ! Used for surface current tallies
   real(8), parameter :: TINY_BIT = 1e-8_8
+
+  integer, parameter :: BUFFER_SIZE = 50
+  integer, parameter :: BUFFER_NUCLIDE = 300
+  integer, parameter :: BUFFER_REACTIONS = 7
 
   ! User for precision in geometry
   real(8), parameter :: FP_PRECISION = 1e-14_8

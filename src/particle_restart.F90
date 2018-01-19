@@ -13,7 +13,7 @@ module particle_restart
   use random_lcg,       only: set_particle_seed
   use settings
   use simulation_header
-  use tally_header,     only: n_tallies
+  use tally_header,     only: n_tallies,TallyBuffer
   use tracking,         only: transport
 
   use hdf5, only: HID_T
@@ -33,6 +33,7 @@ contains
     integer(8) :: particle_seed
     integer :: previous_run_mode
     type(Particle) :: p
+    type(TallyBuffer) :: buffer
 
     ! Set verbosity high
     verbosity = 10
@@ -59,7 +60,7 @@ contains
     call set_particle_seed(particle_seed)
 
     ! Transport neutron
-    call transport(p)
+    call transport(p,buffer)
 
     ! Write output if particle made it
     call print_particle(p)

@@ -6,6 +6,7 @@ module tracking
   use geometry_header,    only: cells
   use geometry,           only: find_cell, distance_to_boundary, cross_lattice, &
                                 check_cell_overlap
+  use material_header,     only: materials
   use message_passing
   use mgxs_header
   use nuclide_header
@@ -33,10 +34,17 @@ contains
 ! TRANSPORT encompasses the main logic for moving a particle through geometry.
 !===============================================================================
 
-  subroutine transport(p)
+  subroutine transport(p,buffer)
 
     type(Particle), intent(inout) :: p
+    type(TallyBuffer), intent(inout) :: buffer
+    
 
+    integer :: idx
+    integer :: i_nuclide
+    integer :: i_reaction
+    integer :: index_nuclide
+  
     integer :: j                      ! coordinate level
     integer :: next_level             ! next coordinate level to check
     integer :: surface_crossed        ! surface which particle is on
@@ -46,7 +54,11 @@ contains
     real(8) :: d_collision            ! sampled distance to collision
     real(8) :: distance               ! distance particle travels
     logical :: found_cell             ! found cell which particle is in?
+    type(Material), pointer :: mat
 
+    idx = buffer % idx
+    buffer % particle(idx) = p
+    buffer % idx = idx + 1
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
       call write_message("Simulating Particle " // trim(to_str(p % id)))
@@ -99,10 +111,40 @@ contains
 
       ! Calculate microscopic and macroscopic cross sections
       if (run_CE) then
+
+        mat => materials(p % material)
         ! If the material is the same as the last material and the temperature
         ! hasn't changed, we don't need to lookup cross sections again.
         if (p % material /= p % last_material .or. &
-             p % sqrtkT /= p % last_sqrtkT) call calculate_xs(p)
+             p % sqrtkT /= p % last_sqrtkT) then 
+
+            call calculate_xs(p)
+            do i_nuclide=1, mat % n_nuclides
+                index_nuclide = mat % nuclide(i_nuclide)
+                do i_reaction=1, BUFFER_REACTIONS-1
+                        !by computing tmp_xs at this stage, I think we don't
+                        !have to worry about 
+                        !saving the interpolation_factor, index_grid, etc.
+                        buffer % tmp_xs(idx,index_nuclide,i_reaction) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = micro_xs(index_nuclide) % fission           
+                end do
+            end do
+
+        else
+            
+            !filled new elements with previous elements.
+            do i_nuclide=1, mat % n_nuclides
+                index_nuclide = mat % nuclide(i_nuclide)
+                do i_reaction=1, BUFFER_REACTIONS-1
+                        !by computing tmp_xs at this stage, I think we don't
+                        !have to worry about 
+                        !saving the interpolation_factor, index_grid, etc.
+                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = buffer % tmp_xs(idx-1,index_nuclide,i_reaction) 
+                buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = buffer % tmp_xs(idx-1,index_nuclide,BUFFER_REACTIONS) 
+                end do
+            end do
+
+        end if
       else
         ! Since the MGXS can be angle dependent, this needs to be done
         ! After every collision for the MGXS mode
@@ -136,15 +178,19 @@ contains
 
       ! Select smaller of the two distances
       distance = min(d_boundary, d_collision)
-
+      buffer % distance(idx) = distance
       ! Advance particle
       do j = 1, p % n_coord
         p % coord(j) % xyz = p % coord(j) % xyz + distance * p % coord(j) % uvw
       end do
+       
 
+      ! check to see if buffer can be flushed
       ! Score track-length tallies
-      if (active_tracklength_tallies % size() > 0) then
-        call score_tracklength_tally(p, distance)
+      if (buffer % idx > BUFFER_SIZE) then
+        call flush_buffer(buffer) 
+        !call score_tracklength_tally(p, distance)
+        buffer % idx = 1
       end if
 
       ! Score track-length estimate of k-eff
@@ -212,7 +258,7 @@ contains
         ! has occurred rather than before because we need information on the
         ! outgoing energy for any tallies with an outgoing energy filter
         if (active_collision_tallies % size() > 0) call score_collision_tally(p)
-        if (active_analog_tallies % size() > 0) call score_analog_tally(p)
+        !if (active_analog_tallies % size() > 0) call score_analog_tally(p)
 
         ! Reset banked weight during collision
         p % n_bank   = 0
@@ -277,6 +323,37 @@ contains
     endif
 
   end subroutine transport
+
+
+!===============================================================================
+! Flushing buffer by calling score_tracklength
+!===============================================================================
+
+  subroutine flush_buffer(buffer)
+
+  type(TallyBuffer), intent(inout) :: buffer
+  integer :: i
+  real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
+  type(Particle), pointer :: par
+  real(8),target :: xs_to_pass(BUFFER_NUCLIDE,BUFFER_REACTIONS)
+  !write(*,*) buffer % tmp_xs(1,1,1) 
+  do i=1,BUFFER_SIZE
+    xs_to_pass = buffer % tmp_xs(i,:,:)
+    P => xs_to_pass
+    associate(par => buffer % particle(i))
+    !need to pass material ID, distance, and cross-section
+    call score_tracklength_tally(par, buffer % distance(i),P)
+    !normal loop over tallies, filters, nuclides, scores
+    !except now just pull material from buffer and cross-section
+    !from tmp_xs
+    end associate
+  end do
+  
+
+    !deallocate(buffer)
+    !deallocate(micro_xs)
+     
+  end subroutine flush_buffer
 
 !===============================================================================
 ! CROSS_SURFACE handles all surface crossings, whether the particle leaks out of

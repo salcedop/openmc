@@ -16,7 +16,7 @@ module tally_header
   use tally_filter_header, only: TallyFilterContainer, filters, n_filters
   use tally_filter
   use trigger_header,      only: TriggerObject
-
+  use particle_header
   implicit none
   private
   public :: configure_tallies
@@ -40,6 +40,17 @@ module tally_header
 ! tally in is given by the TallyFilters and the results are stored in a
 ! TallyResult array.
 !===============================================================================
+  
+  
+  type,public :: TallyBuffer
+
+    integer :: idx = 1
+    type(Particle) :: particle(BUFFER_SIZE)
+
+    real(8) :: distance(BUFFER_SIZE)
+    real(8) :: tmp_xs(BUFFER_SIZE,BUFFER_NUCLIDE,BUFFER_REACTIONS) = 0.0
+
+  end type TallyBuffer
 
   type, public :: TallyObject
     ! Basic data

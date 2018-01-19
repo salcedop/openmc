@@ -74,6 +74,7 @@ contains
 
     type(Particle) :: p
     integer(8)     :: i_work
+    type(TallyBuffer) :: buffer
 
     ! Make sure simulation has been initialized
     if (.not. simulation_initialized) then
@@ -109,7 +110,7 @@ contains
         call initialize_history(p, current_work)
 
         ! transport particle
-        call transport(p)
+        call transport(p,buffer)
 
       end do PARTICLE_LOOP
 !$omp end parallel do
@@ -498,9 +499,9 @@ contains
     ! Broadcast tally results so that each process has access to results
     if (allocated(tallies)) then
       do i = 1, size(tallies)
-        n = size(tallies(i) % obj % results)
-        call MPI_BCAST(tallies(i) % obj % results, n, MPI_DOUBLE, 0, &
-             mpi_intracomm, mpi_err)
+        !n = size(tallies(i) % obj % results)
+        !call MPI_BCAST(tallies(i) % obj % results, n, MPI_DOUBLE, 0, &
+         !    mpi_intracomm, mpi_err)
       end do
     end if
 

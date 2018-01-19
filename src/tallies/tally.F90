@@ -29,7 +29,7 @@ module tally
 
   abstract interface
     subroutine score_general_(p, t, start_index, filter_index, i_nuclide, &
-                              atom_density, flux)
+                              atom_density, flux,tmp_xs)
       import Particle
       import TallyObject
       type(Particle),    intent(in)    :: p
@@ -39,11 +39,14 @@ module tally
       integer,            intent(in)   :: filter_index   ! for % results
       real(8),            intent(in)   :: flux           ! flux estimate
       real(8),            intent(in)   :: atom_density   ! atom/b-cm
+      real(8),intent(in) :: tmp_xs(:,:)
+
     end subroutine score_general_
 
-    subroutine score_analog_tally_(p)
+    subroutine score_analog_tally_(p,tmp_xs)
       import Particle
       type(Particle), intent(in) :: p
+      real(8),intent(in) :: tmp_xs(:,:)
     end subroutine score_analog_tally_
   end interface
 
@@ -73,7 +76,7 @@ contains
 !===============================================================================
 
   subroutine score_general_ce(p, t, start_index, filter_index, i_nuclide, &
-       atom_density, flux)
+       atom_density, flux,tmp_xs)
     type(Particle),    intent(in)    :: p
     type(TallyObject), intent(inout) :: t
     integer,           intent(in)    :: start_index
@@ -81,6 +84,7 @@ contains
     integer,           intent(in)    :: filter_index   ! for % results
     real(8),           intent(in)    :: flux           ! flux estimate
     real(8),           intent(in)    :: atom_density   ! atom/b-cm
+    real(8),intent(in) :: tmp_xs(:,:)
 
     integer :: i                    ! loop index for scoring bins
     integer :: l                    ! loop index for nuclides in material
@@ -101,7 +105,6 @@ contains
     real(8) :: f                    ! interpolation factor
     real(8) :: score                ! analog tally score
     real(8) :: E                    ! particle energy
-
     ! Pre-collision energy of particle
     E = p % last_E
 
@@ -356,7 +359,8 @@ contains
 
         else
           if (i_nuclide > 0) then
-            score = micro_xs(i_nuclide) % fission * atom_density * flux
+            !score = micro_xs(i_nuclide) % fission * atom_density * flux
+             score = tmp_xs(i_nuclide,BUFFER_REACTIONS) * atom_density * flux
           else
             score = material_xs % fission * flux
           end if
@@ -1155,7 +1159,8 @@ contains
           end select
 
           if (i_nuclide > 0) then
-            score = micro_xs(i_nuclide) % reaction(m) * atom_density * flux
+            score = tmp_xs(i_nuclide,m) * atom_density * flux
+            !score = tmp_xs* atom_density * flux
           else
             score = ZERO
             if (p % material /= MATERIAL_VOID) then
@@ -1163,7 +1168,7 @@ contains
                 do l = 1, materials(p % material) % n_nuclides
                   i_nuc = mat % nuclide(l)
                   atom_density_ = mat % atom_density(l)
-                  score = score + micro_xs(i_nuc) % reaction(m) * atom_density_ * flux
+                  score = score + tmp_xs(i_nuc,m) * atom_density_ * flux
                 end do
               end associate
             end if
@@ -1272,7 +1277,7 @@ contains
   end subroutine score_general_ce
 
   subroutine score_general_mg(p, t, start_index, filter_index, i_nuclide, &
-       atom_density, flux)
+       atom_density, flux,tmp_xs)
     type(Particle),    intent(in)    :: p
     type(TallyObject), intent(inout) :: t
     integer,           intent(in)    :: start_index
@@ -1280,6 +1285,8 @@ contains
     integer,           intent(in)    :: filter_index   ! for % results
     real(8),           intent(in)    :: flux           ! flux estimate
     real(8),           intent(in)    :: atom_density   ! atom/b-cm
+
+    real(8),intent(in) :: tmp_xs(:,:)
 
     integer :: i                    ! loop index for scoring bins
     integer :: q                    ! loop index for scoring bins
@@ -2184,17 +2191,18 @@ contains
 ! the user requests <nuclides>all</nuclides>.
 !===============================================================================
 
-  subroutine score_all_nuclides(p, t, flux, filter_index)
+  subroutine score_all_nuclides(p, t, flux, filter_index,tmp_xs)
 
     type(Particle), intent(in) :: p
     type(TallyObject), intent(inout) :: t
     real(8),        intent(in) :: flux
     integer,        intent(in) :: filter_index
-
+    real(8),intent(in) :: tmp_xs(:,:)
     integer :: i             ! loop index for nuclides in material
     integer :: i_nuclide     ! index in nuclides array
     real(8) :: atom_density  ! atom density of single nuclide in atom/b-cm
     type(Material),    pointer :: mat
+    
 
     ! Get pointer to current material. We need this in order to determine what
     ! nuclides are in the material
@@ -2212,7 +2220,7 @@ contains
 
       ! Determine score for each bin
       call score_general(p, t, (i_nuclide-1)*t % n_score_bins, filter_index, &
-           i_nuclide, atom_density, flux)
+           i_nuclide, atom_density, flux,tmp_xs)
 
     end do NUCLIDE_LOOP
 
@@ -2224,7 +2232,7 @@ contains
 
     ! Determine score for each bin
     call score_general(p, t, n_nuclides*t % n_score_bins, filter_index, &
-         i_nuclide, atom_density, flux)
+         i_nuclide, atom_density, flux,tmp_xs)
 
   end subroutine score_all_nuclides
 
@@ -2234,10 +2242,11 @@ contains
 ! triggered at every collision, not every event
 !===============================================================================
 
-  subroutine score_analog_tally_ce(p)
+  subroutine score_analog_tally_ce(p,tmp_xs)
 
     type(Particle), intent(in) :: p
 
+    real(8),intent(in) :: tmp_xs(:,:)
     integer :: i, j
     integer :: i_tally
     integer :: i_filt
@@ -2247,7 +2256,6 @@ contains
     integer :: i_nuclide            ! index in nuclides array
     real(8) :: filter_weight        ! combined weight of all filters
     logical :: finished             ! found all valid bin combinations
-
     ! A loop over all tallies is necessary because we need to simultaneously
     ! determine different filter bins for the same tally in order to score to it
 
@@ -2335,7 +2343,7 @@ contains
 
           ! Determine score for each bin
           call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
-               i_nuclide, ZERO, filter_weight)
+               i_nuclide, ZERO, filter_weight,tmp_xs)
 
         end do NUCLIDE_LOOP
 
@@ -2378,10 +2386,10 @@ contains
 
   end subroutine score_analog_tally_ce
 
-  subroutine score_analog_tally_mg(p)
+  subroutine score_analog_tally_mg(p,tmp_xs)
 
     type(Particle), intent(in) :: p
-
+    real(8),intent(in) :: tmp_xs(:,:)
     integer :: i, j
     integer :: i_tally
     integer :: i_filt
@@ -2393,7 +2401,7 @@ contains
     real(8) :: atom_density
     logical :: finished             ! found all valid bin combinations
     type(Material),    pointer :: mat
-
+    
     ! A loop over all tallies is necessary because we need to simultaneously
     ! determine different filter bins for the same tally in order to score to it
 
@@ -2465,7 +2473,7 @@ contains
           end if
 
           call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
-               i_nuclide, atom_density, filter_weight)
+               i_nuclide, atom_density, filter_weight,tmp_xs)
         end do NUCLIDE_LOOP
 
         ! ======================================================================
@@ -2742,11 +2750,11 @@ contains
 ! that require post-collision information.
 !===============================================================================
 
-  subroutine score_tracklength_tally(p, distance)
-
+  subroutine score_tracklength_tally(p, distance,tmp_xs)
+    
     type(Particle), intent(in) :: p
     real(8),        intent(in) :: distance
-
+    real(8),intent(in) :: tmp_xs(:,:)
     integer :: i
     integer :: i_tally
     integer :: i_filt
@@ -2815,7 +2823,7 @@ contains
 
         if (t % all_nuclides) then
           if (p % material /= MATERIAL_VOID) then
-            call score_all_nuclides(p, t, flux * filter_weight, filter_index)
+            call score_all_nuclides(p, t, flux * filter_weight, filter_index,tmp_xs)
           end if
         else
 
@@ -2841,7 +2849,7 @@ contains
 
             ! Determine score for each bin
             call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
-                 i_nuclide, atom_density, flux * filter_weight)
+                 i_nuclide, atom_density, flux * filter_weight,tmp_xs)
 
           end do NUCLIDE_BIN_LOOP
 
@@ -2912,7 +2920,7 @@ contains
     real(8) :: filter_weight        ! combined weight of all filters
     logical :: finished             ! found all valid bin combinations
     type(Material),    pointer :: mat
-
+    real(8) :: tmp_xs(BUFFER_NUCLIDE,BUFFER_REACTIONS)
     ! Determine collision estimate of flux
     if (survival_biasing) then
       ! We need to account for the fact that some weight was already absorbed
@@ -2972,7 +2980,7 @@ contains
 
         if (t % all_nuclides) then
           if (p % material /= MATERIAL_VOID) then
-            call score_all_nuclides(p, t, flux * filter_weight, filter_index)
+            call score_all_nuclides(p, t, flux * filter_weight, filter_index,tmp_xs)
           end if
         else
 
@@ -2998,7 +3006,7 @@ contains
 
             ! Determine score for each bin
             call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
-                 i_nuclide, atom_density, flux * filter_weight)
+                 i_nuclide, atom_density, flux * filter_weight,tmp_xs)
 
           end do NUCLIDE_BIN_LOOP
 

@@ -57,6 +57,7 @@ contains
     type(Material), pointer :: mat
 
     idx = buffer % idx
+    write(*,*) idx
     buffer % particle(idx) = p
     buffer % idx = idx + 1
     ! Display message if high verbosity or trace is on
@@ -108,6 +109,14 @@ contains
       if (p % write_track) call write_particle_track(p)
 
       if (check_overlaps) call check_cell_overlap(p)
+
+      ! check to see if buffer can be flushed
+      ! Score track-length tallies
+      if (buffer % idx > BUFFER_SIZE) then
+        call flush_buffer(buffer) 
+        write(*,*) buffer % idx
+        buffer % idx = 1
+      end if
 
       ! Calculate microscopic and macroscopic cross sections
       if (run_CE) then
@@ -185,13 +194,6 @@ contains
       end do
        
 
-      ! check to see if buffer can be flushed
-      ! Score track-length tallies
-      if (buffer % idx > BUFFER_SIZE) then
-        call flush_buffer(buffer) 
-        !call score_tracklength_tally(p, distance)
-        buffer % idx = 1
-      end if
 
       ! Score track-length estimate of k-eff
       if (run_mode == MODE_EIGENVALUE) then

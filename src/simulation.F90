@@ -59,6 +59,7 @@ contains
   subroutine openmc_run() bind(C)
 
     call openmc_simulation_init()
+    write(*,*) "empezamos bien"
     do while (openmc_next_batch() == 0)
     end do
     call openmc_simulation_finalize()
@@ -81,9 +82,9 @@ contains
       retval = -3
       return
     end if
-
+    write(*,*) "b ini_batch"
     call initialize_batch()
-
+    write(*,*) "b ini_batch"
     ! Handle restart runs
     if (restart_run .and. current_batch <= restart_batch) then
       call replay_batch_history()
@@ -94,9 +95,9 @@ contains
     ! =======================================================================
     ! LOOP OVER GENERATIONS
     GENERATION_LOOP: do current_gen = 1, gen_per_batch
-
+      write(*,*) "b ini_gen"
       call initialize_generation()
-
+      write(*,*) "a ini_gen"
       ! Start timer for transport
       call time_transport % start()
 
@@ -105,11 +106,12 @@ contains
 !$omp parallel do schedule(runtime) firstprivate(p,buffer) copyin(tally_derivs)
       PARTICLE_LOOP: do i_work = 1, work
         current_work = i_work
-
+        write(*,*) "b ini_his"
         ! grab source particle from bank
         call initialize_history(p, current_work)
-
+      
         ! transport particle
+        write(*,*) "puneta!!"
         call transport(p,buffer)
 
       end do PARTICLE_LOOP
@@ -405,28 +407,28 @@ contains
 
   subroutine openmc_simulation_init() bind(C)
     integer :: i
-
+    
     ! Skip if simulation has already been initialized
     if (simulation_initialized) return
-
+    
     ! Set up tally procedure pointers
     call init_tally_routines()
-
+    
     ! Determine how much work each processor should do
     call calculate_work()
-
+    
     ! Allocate source bank, and for eigenvalue simulations also allocate the
     ! fission bank
     call allocate_banks()
-
+    
     ! Allocate tally results arrays if they're not allocated yet
     call configure_tallies()
-
+    
     ! Set up material nuclide index mapping
     do i = 1, n_materials
       call materials(i) % init_nuclide_index()
     end do
-
+    
 !$omp parallel
     ! Allocate array for microscopic cross section cache
     allocate(micro_xs(n_nuclides))
@@ -459,7 +461,7 @@ contains
 
     ! Set flag indicating initialization is done
     simulation_initialized = .true.
-
+    
   end subroutine openmc_simulation_init
 
 !===============================================================================

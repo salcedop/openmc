@@ -112,11 +112,6 @@ contains
 
       ! check to see if buffer can be flushed
       ! Score track-length tallies
-      if (buffer % idx > BUFFER_SIZE) then
-        call flush_buffer(buffer) 
-        write(*,*) buffer % idx
-        buffer % idx = 1
-      end if
 
       ! Calculate microscopic and macroscopic cross sections
       if (run_CE) then
@@ -188,6 +183,13 @@ contains
       ! Select smaller of the two distances
       distance = min(d_boundary, d_collision)
       buffer % distance(idx) = distance
+
+      
+      if (buffer % idx > BUFFER_SIZE) then
+        call flush_buffer(buffer) 
+        write(*,*) buffer % idx
+        buffer % idx = 1
+      end if
       ! Advance particle
       do j = 1, p % n_coord
         p % coord(j) % xyz = p % coord(j) % xyz + distance * p % coord(j) % uvw

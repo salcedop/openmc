@@ -59,11 +59,12 @@ contains
   subroutine openmc_run() bind(C)
 
     call openmc_simulation_init()
-    write(*,*) "empezamos bien"
+    !write(*,*) "empezamos bien"
     do while (openmc_next_batch() == 0)
+    !write(*,*) "dentrol del openmc_run loop"
     end do
     call openmc_simulation_finalize()
-
+    !write(*,*) "terminamos"
   end subroutine openmc_run
 
 !===============================================================================
@@ -72,11 +73,11 @@ contains
 
   function openmc_next_batch() result(retval) bind(C)
     integer(C_INT) :: retval
-
     type(Particle) :: p
     integer(8)     :: i_work
     type(TallyBuffer) :: buffer
 
+    write(*,*) "next b"
     ! Make sure simulation has been initialized
     if (.not. simulation_initialized) then
       retval = -3

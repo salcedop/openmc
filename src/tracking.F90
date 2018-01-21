@@ -44,7 +44,7 @@ contains
     integer :: i_nuclide
     integer :: i_reaction
     integer :: index_nuclide
-  
+    
     integer :: j                      ! coordinate level
     integer :: next_level             ! next coordinate level to check
     integer :: surface_crossed        ! surface which particle is on
@@ -57,7 +57,7 @@ contains
     type(Material), pointer :: mat
 
     idx = buffer % idx
-    write(*,*) idx
+    !write(*,*) idx 
     buffer % particle(idx) = p
     buffer % idx = idx + 1
     ! Display message if high verbosity or trace is on
@@ -137,16 +137,33 @@ contains
         else
             
             !filled new elements with previous elements.
+            if (idx == 1) then
+                !write(*,*) "toy aqui"
+                call calculate_xs(p)
             do i_nuclide=1, mat % n_nuclides
                 index_nuclide = mat % nuclide(i_nuclide)
                 do i_reaction=1, BUFFER_REACTIONS-1
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
+                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = micro_xs(index_nuclide) % reaction(i_reaction)
+                buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = micro_xs(index_nuclide) % fission
+                end do
+            end do
+            end if
+            if (idx > 1) then
+            do i_nuclide=1, mat % n_nuclides
+                index_nuclide = mat % nuclide(i_nuclide)
+                do i_reaction=1, BUFFER_REACTIONS-1
+                        !by computing tmp_xs at this stage, I think we don't
+                        !have to worry about 
+                        !saving the interpolation_factor, index_grid, etc.
+                        !write(*,*) idx
                         buffer % tmp_xs(idx,index_nuclide,i_reaction) = buffer % tmp_xs(idx-1,index_nuclide,i_reaction) 
                 buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = buffer % tmp_xs(idx-1,index_nuclide,BUFFER_REACTIONS) 
                 end do
             end do
+            end if
 
         end if
       else
@@ -187,7 +204,7 @@ contains
       
       if (buffer % idx > BUFFER_SIZE) then
         call flush_buffer(buffer) 
-        write(*,*) buffer % idx
+        !write(*,*) buffer % idx
         buffer % idx = 1
       end if
       ! Advance particle

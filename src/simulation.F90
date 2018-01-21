@@ -77,15 +77,14 @@ contains
     integer(8)     :: i_work
     type(TallyBuffer) :: buffer
 
-    write(*,*) "next b"
     ! Make sure simulation has been initialized
     if (.not. simulation_initialized) then
       retval = -3
       return
     end if
-    write(*,*) "b ini_batch"
+    
     call initialize_batch()
-    write(*,*) "b ini_batch"
+    
     ! Handle restart runs
     if (restart_run .and. current_batch <= restart_batch) then
       call replay_batch_history()
@@ -96,9 +95,9 @@ contains
     ! =======================================================================
     ! LOOP OVER GENERATIONS
     GENERATION_LOOP: do current_gen = 1, gen_per_batch
-      write(*,*) "b ini_gen"
+      
       call initialize_generation()
-      write(*,*) "a ini_gen"
+      
       ! Start timer for transport
       call time_transport % start()
 
@@ -107,12 +106,12 @@ contains
 !$omp parallel do schedule(runtime) firstprivate(p,buffer) copyin(tally_derivs)
       PARTICLE_LOOP: do i_work = 1, work
         current_work = i_work
-        write(*,*) "b ini_his"
+        
         ! grab source particle from bank
         call initialize_history(p, current_work)
       
         ! transport particle
-        write(*,*) "puneta!!"
+        
         call transport(p,buffer)
 
       end do PARTICLE_LOOP

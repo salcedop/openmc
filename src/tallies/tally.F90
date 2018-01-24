@@ -120,7 +120,8 @@ contains
 
       !#########################################################################
       ! Determine appropirate scoring value.
-
+      write(*,*) score_bin
+      write(*,*) "----"
       select case(score_bin)
 
 
@@ -1166,6 +1167,8 @@ contains
             if (p % material /= MATERIAL_VOID) then
               associate (mat => materials(p % material))
                 do l = 1, materials(p % material) % n_nuclides
+                  write(*,*) tmp_xs(i_nuclide,m)
+                  write(*,*) "-----"
                   i_nuc = mat % nuclide(l)
                   atom_density_ = mat % atom_density(l)
                   score = score + tmp_xs(i_nuc,m) * atom_density_ * flux
@@ -1303,7 +1306,7 @@ contains
                                     ! to tally with.
     class(Mgxs), pointer :: matxs
     class(Mgxs), pointer :: nucxs
-
+     
     ! Set the direction and group to use with get_xs
     if (t % estimator == ESTIMATOR_ANALOG .or. &
          t % estimator == ESTIMATOR_COLLISION) then
@@ -2771,10 +2774,11 @@ contains
 
     ! Determine track-length estimate of flux
     flux = p % wgt * distance
-
+   
     ! A loop over all tallies is necessary because we need to simultaneously
     ! determine different filter bins for the same tally in order to score to it
-
+    !write(*,*) "llegue"
+    !write(*,*) "-----"
     TALLY_LOOP: do i = 1, active_tracklength_tallies % size()
       ! Get index of tally and pointer to tally
       i_tally = active_tracklength_tallies % data(i)
@@ -2846,11 +2850,12 @@ contains
                 atom_density = ZERO
               end if
             end if
-
+  
+            write(*,*) "score_general"
             ! Determine score for each bin
             call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
                  i_nuclide, atom_density, flux * filter_weight,tmp_xs)
-
+            
           end do NUCLIDE_BIN_LOOP
 
         end if

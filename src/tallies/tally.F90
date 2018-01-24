@@ -120,8 +120,7 @@ contains
 
       !#########################################################################
       ! Determine appropirate scoring value.
-      write(*,*) score_bin
-      write(*,*) "----"
+      
       select case(score_bin)
 
 
@@ -1161,14 +1160,15 @@ contains
 
           if (i_nuclide > 0) then
             score = tmp_xs(i_nuclide,m) * atom_density * flux
+             
             !score = tmp_xs* atom_density * flux
           else
             score = ZERO
             if (p % material /= MATERIAL_VOID) then
               associate (mat => materials(p % material))
                 do l = 1, materials(p % material) % n_nuclides
-                  write(*,*) tmp_xs(i_nuclide,m)
-                  write(*,*) "-----"
+                  !write(*,*) tmp_xs(i_nuclide,m)
+                  !write(*,*) "-----"
                   i_nuc = mat % nuclide(l)
                   atom_density_ = mat % atom_density(l)
                   score = score + tmp_xs(i_nuc,m) * atom_density_ * flux
@@ -2753,9 +2753,9 @@ contains
 ! that require post-collision information.
 !===============================================================================
 
-  subroutine score_tracklength_tally(p, distance,tmp_xs)
-    
-    type(Particle), intent(in) :: p
+  subroutine score_tracklength_tally(mat_id, distance,tmp_xs)
+    integer, intent(in) :: mat_id
+    type(Particle) :: p
     real(8),        intent(in) :: distance
     real(8),intent(in) :: tmp_xs(:,:)
     integer :: i
@@ -2771,14 +2771,15 @@ contains
     real(8) :: filter_weight        ! combined weight of all filters
     logical :: finished             ! found all valid bin combinations
     type(Material),    pointer :: mat
-
+    
     ! Determine track-length estimate of flux
-    flux = p % wgt * distance
-   
+    !flux = p % wgt * distance
+    flux = distance
+    p % material = mat_id
     ! A loop over all tallies is necessary because we need to simultaneously
     ! determine different filter bins for the same tally in order to score to it
     !write(*,*) "llegue"
-    !write(*,*) "-----"
+    !write(*,*) active_tracklength_tallies % size()
     TALLY_LOOP: do i = 1, active_tracklength_tallies % size()
       ! Get index of tally and pointer to tally
       i_tally = active_tracklength_tallies % data(i)
@@ -2802,7 +2803,7 @@ contains
         ! Set the index of the bin used in the first filter combination
         filter_matches(i_filt) % i_bin = 1
       end do
-
+      !write(*,*) "tally_loop_cont"
       ! ========================================================================
       ! Loop until we've covered all valid bins on each of the filters.
 
@@ -2827,10 +2828,11 @@ contains
 
         if (t % all_nuclides) then
           if (p % material /= MATERIAL_VOID) then
+            !write(*,*) "nuclide logic"
             call score_all_nuclides(p, t, flux * filter_weight, filter_index,tmp_xs)
           end if
         else
-
+          !write(*,*) "b nuclide loop"
           NUCLIDE_BIN_LOOP: do k = 1, t % n_nuclide_bins
             ! Get index of nuclide in nuclides array
             i_nuclide = t % nuclide_bins(k)
@@ -2851,7 +2853,7 @@ contains
               end if
             end if
   
-            write(*,*) "score_general"
+            !write(*,*) "score_general"
             ! Determine score for each bin
             call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
                  i_nuclide, atom_density, flux * filter_weight,tmp_xs)

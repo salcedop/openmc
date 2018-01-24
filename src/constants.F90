@@ -42,7 +42,7 @@ module constants
   ! Used for surface current tallies
   real(8), parameter :: TINY_BIT = 1e-8_8
 
-  integer, parameter :: BUFFER_SIZE = 50
+  integer, parameter :: BUFFER_SIZE = 80
   integer, parameter :: BUFFER_NUCLIDE = 300
   integer, parameter :: BUFFER_REACTIONS = 7
 

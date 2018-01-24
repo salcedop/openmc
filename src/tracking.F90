@@ -34,10 +34,10 @@ contains
 ! TRANSPORT encompasses the main logic for moving a particle through geometry.
 !===============================================================================
 
-  subroutine transport(p,buffer)
+  subroutine transport(p)
 
     type(Particle), intent(inout) :: p
-    type(TallyBuffer), intent(inout) :: buffer
+    type(TallyBuffer) :: buffer
     
 
     integer :: idx
@@ -56,10 +56,6 @@ contains
     logical :: found_cell             ! found cell which particle is in?
     type(Material), pointer :: mat
 
-    idx = buffer % idx
-    !write(*,*) idx 
-    buffer % particle(idx) = p
-    buffer % idx = idx + 1
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
       call write_message("Simulating Particle " // trim(to_str(p % id)))
@@ -87,6 +83,9 @@ contains
 
     EVENT_LOOP: do
       ! Store pre-collision particle properties
+      idx = buffer % idx
+      buffer % idx = idx + 1
+      buffer % material(idx) = p % material
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -204,8 +203,6 @@ contains
       
       if (buffer % idx > BUFFER_SIZE) then
         call flush_buffer(buffer) 
-        !write(*,*) buffer % idx
-        buffer % idx = 1
       end if
       ! Advance particle
       do j = 1, p % n_coord
@@ -355,22 +352,22 @@ contains
   type(TallyBuffer), intent(inout) :: buffer
   integer :: i
   real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
-  type(Particle), pointer :: par
   real(8),target :: xs_to_pass(BUFFER_NUCLIDE,BUFFER_REACTIONS)
-  !write(*,*) buffer % tmp_xs(1,1,1) 
+  
   do i=1,BUFFER_SIZE
     xs_to_pass = buffer % tmp_xs(i,:,:)
     P => xs_to_pass
-    associate(par => buffer % particle(i))
+    
     !need to pass material ID, distance, and cross-section
-    call score_tracklength_tally(par, buffer % distance(i),P)
+    call score_tracklength_tally(buffer % material (i), buffer % distance(i),P)
     !normal loop over tallies, filters, nuclides, scores
     !except now just pull material from buffer and cross-section
     !from tmp_xs
-    end associate
+    
   end do
   
-
+    buffer % tmp_xs(:,:,:) = 0.0
+    buffer % idx = 1
     !deallocate(buffer)
     !deallocate(micro_xs)
      

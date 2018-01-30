@@ -124,12 +124,12 @@ contains
             call calculate_xs(p)
             do i_nuclide=1, mat % n_nuclides
                 index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1, BUFFER_REACTIONS-1
+                do i_reaction=1, 6
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
                         buffer % tmp_xs(idx,index_nuclide,i_reaction) =  micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = micro_xs(index_nuclide) % fission           
+                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission           
                 end do
             end do
 
@@ -141,25 +141,25 @@ contains
                 call calculate_xs(p)
             do i_nuclide=1, mat % n_nuclides
                 index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1, BUFFER_REACTIONS-1
+                do i_reaction=1,6
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
                         buffer % tmp_xs(idx,index_nuclide,i_reaction) = micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = micro_xs(index_nuclide) % fission
+                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission
                 end do
             end do
             end if
             if (idx > 1) then
             do i_nuclide=1, mat % n_nuclides
                 index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1, BUFFER_REACTIONS-1
+                do i_reaction=1, 6
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
                         !write(*,*) idx
                         buffer % tmp_xs(idx,index_nuclide,i_reaction) = buffer % tmp_xs(idx-1,index_nuclide,i_reaction) 
-                buffer % tmp_xs(idx,index_nuclide,BUFFER_REACTIONS) = buffer % tmp_xs(idx-1,index_nuclide,BUFFER_REACTIONS) 
+                buffer % tmp_xs(idx,index_nuclide,7) = buffer % tmp_xs(idx-1,index_nuclide,7) 
                 end do
             end do
             end if

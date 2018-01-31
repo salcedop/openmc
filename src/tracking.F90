@@ -44,7 +44,8 @@ contains
     integer :: i_nuclide
     integer :: i_reaction
     integer :: index_nuclide
-    
+    integer :: counter = 0
+
     integer :: j                      ! coordinate level
     integer :: next_level             ! next coordinate level to check
     integer :: surface_crossed        ! surface which particle is on
@@ -116,53 +117,66 @@ contains
       if (run_CE) then
 
         mat => materials(p % material)
+        n_nuclide = mat % n_nuclide
         ! If the material is the same as the last material and the temperature
         ! hasn't changed, we don't need to lookup cross sections again.
         if (p % material /= p % last_material .or. &
              p % sqrtkT /= p % last_sqrtkT) then 
 
             call calculate_xs(p)
+            if (idx == 1) then
+            buffer % stride(idx) = n_nuclide * 7
+            !reset counter
+            counter = 0 
+            allocate(buffer % tmp_xs(n_nuclide))
+            else
+            buffer % stride(idx) = buffer % stride(idx-1) + n_nuclide * 7
+            call buffer%tmp_xs%resize(n_nuclide,0.0)
+            end if
+            
             do i_nuclide=1, mat % n_nuclides
                 index_nuclide = mat % nuclide(i_nuclide)
+                counter = counter + 1 
                 do i_reaction=1, 6
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) =  micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission           
+                        buffer % tmp_xs(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                        counter = counter + 1
+                buffer % tmp_xs(counter) = micro_xs(index_nuclide) % fission           
                 end do
             end do
 
         else
-            
-            !filled new elements with previous elements.
+            !this is the special case. 
             if (idx == 1) then
-                !write(*,*) "toy aqui"
                 call calculate_xs(p)
-            do i_nuclide=1, mat % n_nuclides
-                index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1,6
-                        !by computing tmp_xs at this stage, I think we don't
-                        !have to worry about 
-                        !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission
-                end do
-            end do
-            end if
-            if (idx > 1) then
-            do i_nuclide=1, mat % n_nuclides
-                index_nuclide = mat % nuclide(i_nuclide)
+                allocate(buffer % tmp_xs(n_nuclide))
+                counter = 0
+                do i_nuclide=1, mat % n_nuclides
+                   index_nuclide = mat % nuclide(i_nuclide)
+                   counter = counter + 1
                 do i_reaction=1, 6
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        !write(*,*) idx
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = buffer % tmp_xs(idx-1,index_nuclide,i_reaction) 
-                buffer % tmp_xs(idx,index_nuclide,7) = buffer % tmp_xs(idx-1,index_nuclide,7) 
+                        buffer % tmp_xs(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                        counter = counter + 1
+                buffer % tmp_xs(counter) = micro_xs(index_nuclide) % fission
                 end do
             end do
             end if
+
+  
+            !filled new elements with previous elements.
+            if (idx > 1) then
+            call buffer%tmp_xs%resize(n_nuclide,0.0)
+               if (idx == 2) then
+               buffer % tmp_xs(buffer % stride(idx-1)+1:buffer % stride(idx)) = buffer % stride(1:buffer % stride(1))
+               else
+               buffer % tmp_xs(buffer % stride(idx-1)+1:buffer % stride(idx)) = buffer % stride(buffer % stride(idx-2):buffer % stride(idx-1))
+               end if
+            end if 
 
         end if
       else
@@ -202,7 +216,7 @@ contains
 
       
       if (buffer % idx > BUFFER_SIZE) then
-        call flush_buffer(buffer) 
+        call flush_buffer() 
       end if
       ! Advance particle
       do j = 1, p % n_coord
@@ -347,17 +361,16 @@ contains
 ! Flushing buffer by calling score_tracklength
 !===============================================================================
 
-  subroutine flush_buffer(buffer)
+  subroutine flush_buffer()
 
-  type(TallyBuffer), intent(inout) :: buffer
+  type(TallyBuffer) :: buffer
   integer :: i
   real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
-  real(8),target :: xs_to_pass(BUFFER_NUCLIDE,BUFFER_REACTIONS)
+  real(8),target :: xs_to_pass(:)
   
   do i=1,BUFFER_SIZE
-    xs_to_pass = buffer % tmp_xs(i,:,:)
+    xs_to_pass = buffer % tmp_xs(:)
     P => xs_to_pass
-    
     !need to pass material ID, distance, and cross-section
     call score_tracklength_tally(buffer % material (i), buffer % distance(i),P)
     !normal loop over tallies, filters, nuclides, scores
@@ -365,8 +378,8 @@ contains
     !from tmp_xs
     
   end do
-  
-    buffer % tmp_xs(:,:,:) = 0.0
+    !clear buffer, don't know if this is the right way to go.
+    call buffer % tmp_xs % clear()
     buffer % idx = 1
     !deallocate(buffer)
     !deallocate(micro_xs)

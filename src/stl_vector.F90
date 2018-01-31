@@ -77,6 +77,25 @@ module stl_vector
     procedure :: size => size_real
   end type VectorReal
 
+  type, public :: VectorReal2
+    integer, private :: size_ = 0
+    integer, private :: capacity_ = 0
+    real(8), allocatable :: data(:)
+  contains
+    procedure :: capacity => capacity_real
+    procedure :: clear => clear_real
+    generic :: initialize => &
+         initialize_fill_real
+    procedure, private :: initialize_fill_real
+    procedure :: pop_back => pop_back_real
+    procedure :: push_back_real2
+    procedure :: reserve => reserve_real
+    procedure :: resize => resize_real
+    procedure :: shrink_to_fit => shrink_to_fit_real
+    procedure :: size => size_real
+  end type VectorReal2
+
+
   type, public :: VectorChar
     integer, private :: size_ = 0
     integer, private :: capacity_ = 0
@@ -376,6 +395,43 @@ contains
 
     size = this%size_
   end function size_real
+
+
+
+!===============================================================================
+! Implementation of VectorReal2
+!===============================================================================
+
+
+  subroutine push_back_real2(this, dynamic_growth_factor,val)
+    class(VectorReal2), intent(inout) :: this
+    real(8), intent(in) :: val
+    integer :: old_size
+    integer :: capacity
+    real(8), allocatable :: data(:)
+    
+    if (this%capacity_ == this%size_) then
+      ! Create new data array that is GROWTH_FACTOR larger. Note that
+      if (this%capacity_ == 0) then
+        capacity = 8
+      else
+        capacity = int(dynamic_growth_factor*GROWTH_FACTOR*this%capacity_)
+      end if
+      allocate(data(capacity))
+       
+      ! Copy existing elements
+      if (this%size_ > 0) data(1:this%size_) = this%data
+
+      ! Move allocation
+      call move_alloc(FROM=data, TO=this%data)
+      old_size = this%size_
+      this%capacity_ = capacity
+    end if
+
+    ! Increase size of vector by one and set new element
+    this%size_ = this%size_ + dynamic_growth_factor
+    this%data(old_size+1:this%size_) = val
+  end subroutine push_back_real2
 
 !===============================================================================
 ! Implementation of VectorChar

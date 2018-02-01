@@ -45,6 +45,8 @@ contains
     integer :: i_reaction
     integer :: index_nuclide
     integer :: counter = 0
+    integer :: n_nuclide
+    integer :: buffer_size
 
     integer :: j                      ! coordinate level
     integer :: next_level             ! next coordinate level to check
@@ -117,7 +119,7 @@ contains
       if (run_CE) then
 
         mat => materials(p % material)
-        n_nuclide = mat % n_nuclide
+        n_nuclide = mat % n_nuclides
         ! If the material is the same as the last material and the temperature
         ! hasn't changed, we don't need to lookup cross sections again.
         if (p % material /= p % last_material .or. &
@@ -128,10 +130,10 @@ contains
             buffer % stride(idx) = n_nuclide * 7
             !reset counter
             counter = 0 
-            allocate(buffer % tmp_xs(n_nuclide))
+            call buffer % tmp_xs % resize(n_nuclide,ZERO)
             else
             buffer % stride(idx) = buffer % stride(idx-1) + n_nuclide * 7
-            call buffer%tmp_xs%resize(n_nuclide,0.0)
+            call buffer%tmp_xs%resize(n_nuclide,ZERO)
             end if
             
             do i_nuclide=1, mat % n_nuclides
@@ -141,9 +143,9 @@ contains
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                        buffer % tmp_xs % data(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
                         counter = counter + 1
-                buffer % tmp_xs(counter) = micro_xs(index_nuclide) % fission           
+                buffer % tmp_xs % data(counter) = micro_xs(index_nuclide) % fission           
                 end do
             end do
 
@@ -151,7 +153,7 @@ contains
             !this is the special case. 
             if (idx == 1) then
                 call calculate_xs(p)
-                allocate(buffer % tmp_xs(n_nuclide))
+                call buffer % tmp_xs % resize(n_nuclide,ZERO)
                 counter = 0
                 do i_nuclide=1, mat % n_nuclides
                    index_nuclide = mat % nuclide(i_nuclide)
@@ -160,9 +162,9 @@ contains
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                        buffer % tmp_xs % data(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
                         counter = counter + 1
-                buffer % tmp_xs(counter) = micro_xs(index_nuclide) % fission
+                buffer % tmp_xs % data(counter) = micro_xs(index_nuclide) % fission
                 end do
             end do
             end if
@@ -170,11 +172,13 @@ contains
   
             !filled new elements with previous elements.
             if (idx > 1) then
-            call buffer%tmp_xs%resize(n_nuclide,0.0)
+            call buffer%tmp_xs%resize(n_nuclide,ZERO)
                if (idx == 2) then
-               buffer % tmp_xs(buffer % stride(idx-1)+1:buffer % stride(idx)) = buffer % stride(1:buffer % stride(1))
+               buffer % tmp_xs % data(buffer % stride(idx-1)+1:buffer % stride(idx)) &
+               = buffer % tmp_xs % data(1:buffer % stride(1))
                else
-               buffer % tmp_xs(buffer % stride(idx-1)+1:buffer % stride(idx)) = buffer % stride(buffer % stride(idx-2):buffer % stride(idx-1))
+               buffer % tmp_xs % data(buffer % stride(idx-1)+1:buffer % stride(idx)) &
+               = buffer % tmp_xs % data (buffer % stride(idx-2):buffer % stride(idx-1))
                end if
             end if 
 
@@ -216,7 +220,8 @@ contains
 
       
       if (buffer % idx > BUFFER_SIZE) then
-        call flush_buffer() 
+        buffer_size = buffer%tmp_xs%size()
+        call flush_buffer(buffer_size) 
       end if
       ! Advance particle
       do j = 1, p % n_coord
@@ -361,18 +366,19 @@ contains
 ! Flushing buffer by calling score_tracklength
 !===============================================================================
 
-  subroutine flush_buffer()
-
+  subroutine flush_buffer(buffer_size)
+  integer, intent(in) :: buffer_size
   type(TallyBuffer) :: buffer
   integer :: i
-  real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
-  real(8),target :: xs_to_pass(:)
+  !real(8), pointer :: P(:) !to pass cross-sections of given mat at energy E.
+  !real(8),target :: xs_to_pass(buffer_size)
   
   do i=1,BUFFER_SIZE
-    xs_to_pass = buffer % tmp_xs(:)
-    P => xs_to_pass
+    !xs_to_pass = buffer % tmp_xs(:)
+    !P => xs_to_pass
     !need to pass material ID, distance, and cross-section
-    call score_tracklength_tally(buffer % material (i), buffer % distance(i),P)
+    call score_tracklength_tally(buffer % material (i), &
+    buffer % distance(i),buffer % tmp_xs)
     !normal loop over tallies, filters, nuclides, scores
     !except now just pull material from buffer and cross-section
     !from tmp_xs

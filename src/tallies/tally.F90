@@ -21,6 +21,7 @@ module tally
   use tally_derivative_header, only: tally_derivs
   use tally_filter
   use tally_header
+  use stl_vector,       only: VectorReal
 
   implicit none
 
@@ -31,6 +32,7 @@ module tally
     subroutine score_general_(p, t, start_index, filter_index, i_nuclide, &
                               atom_density, flux,tmp_xs)
       import Particle
+      import VectorReal
       import TallyObject
       type(Particle),    intent(in)    :: p
       type(TallyObject), intent(inout) :: t
@@ -39,14 +41,15 @@ module tally
       integer,            intent(in)   :: filter_index   ! for % results
       real(8),            intent(in)   :: flux           ! flux estimate
       real(8),            intent(in)   :: atom_density   ! atom/b-cm
-      real(8),intent(in) :: tmp_xs(:,:)
+      type(VectorReal),intent(in) :: tmp_xs
 
     end subroutine score_general_
 
     subroutine score_analog_tally_(p,tmp_xs)
       import Particle
+      import VectorReal
       type(Particle), intent(in) :: p
-      real(8),intent(in) :: tmp_xs(:,:)
+      type(VectorReal),intent(in) :: tmp_xs
     end subroutine score_analog_tally_
   end interface
 
@@ -84,7 +87,7 @@ contains
     integer,           intent(in)    :: filter_index   ! for % results
     real(8),           intent(in)    :: flux           ! flux estimate
     real(8),           intent(in)    :: atom_density   ! atom/b-cm
-    real(8),intent(in) :: tmp_xs(:,:)
+    type(VectorReal),intent(in) :: tmp_xs
 
     integer :: i                    ! loop index for scoring bins
     integer :: l                    ! loop index for nuclides in material
@@ -360,7 +363,7 @@ contains
         else
           if (i_nuclide > 0) then
             !score = micro_xs(i_nuclide) % fission * atom_density * flux
-             score = tmp_xs(i_nuclide,BUFFER_REACTIONS) * atom_density * flux
+             score = tmp_xs % data(i_nuclide+6) * atom_density * flux
           else
             score = material_xs % fission * flux
           end if
@@ -1159,7 +1162,7 @@ contains
           end select
 
           if (i_nuclide > 0) then
-            score = tmp_xs(i_nuclide,m) * atom_density * flux
+            score = tmp_xs % data(i_nuclide+m-1) * atom_density * flux
              
             !score = tmp_xs* atom_density * flux
           else
@@ -1171,7 +1174,7 @@ contains
                   !write(*,*) "-----"
                   i_nuc = mat % nuclide(l)
                   atom_density_ = mat % atom_density(l)
-                  score = score + tmp_xs(i_nuc,m) * atom_density_ * flux
+                  score = score + tmp_xs % data(i_nuclide+m-1) * atom_density_ * flux
                 end do
               end associate
             end if
@@ -1289,7 +1292,7 @@ contains
     real(8),           intent(in)    :: flux           ! flux estimate
     real(8),           intent(in)    :: atom_density   ! atom/b-cm
 
-    real(8),intent(in) :: tmp_xs(:,:)
+    type(VectorReal),intent(in) :: tmp_xs
 
     integer :: i                    ! loop index for scoring bins
     integer :: q                    ! loop index for scoring bins
@@ -2200,7 +2203,7 @@ contains
     type(TallyObject), intent(inout) :: t
     real(8),        intent(in) :: flux
     integer,        intent(in) :: filter_index
-    real(8),intent(in) :: tmp_xs(:,:)
+    type(VectorReal),intent(in) :: tmp_xs
     integer :: i             ! loop index for nuclides in material
     integer :: i_nuclide     ! index in nuclides array
     real(8) :: atom_density  ! atom density of single nuclide in atom/b-cm
@@ -2249,7 +2252,7 @@ contains
 
     type(Particle), intent(in) :: p
 
-    real(8),intent(in) :: tmp_xs(:,:)
+    type(VectorReal),intent(in) :: tmp_xs
     integer :: i, j
     integer :: i_tally
     integer :: i_filt
@@ -2392,7 +2395,7 @@ contains
   subroutine score_analog_tally_mg(p,tmp_xs)
 
     type(Particle), intent(in) :: p
-    real(8),intent(in) :: tmp_xs(:,:)
+    type(VectorReal),intent(in) :: tmp_xs
     integer :: i, j
     integer :: i_tally
     integer :: i_filt
@@ -2757,7 +2760,8 @@ contains
     integer, intent(in) :: mat_id
     type(Particle) :: p
     real(8),        intent(in) :: distance
-    real(8),intent(in) :: tmp_xs(:,:)
+    type(VectorReal),intent(inout) :: tmp_xs
+    integer :: tmp_counter
     integer :: i
     integer :: i_tally
     integer :: i_filt
@@ -2844,6 +2848,7 @@ contains
 
                 ! Determine index of nuclide in Material % atom_density array
                 j = mat % mat_nuclide_index(i_nuclide)
+                
                 if (j == 0) cycle NUCLIDE_BIN_LOOP
 
                 ! Copy corresponding atom density
@@ -2852,11 +2857,11 @@ contains
                 atom_density = ZERO
               end if
             end if
-  
-            !write(*,*) "score_general"
+            !getting index that corresponds to right nuclide in tmp_xs array.
+            tmp_counter = (j-1)*7 + 1
             ! Determine score for each bin
             call score_general(p, t, (k-1)*t % n_score_bins, filter_index, &
-                 i_nuclide, atom_density, flux * filter_weight,tmp_xs)
+                 tmp_counter, atom_density, flux * filter_weight,tmp_xs)
             
           end do NUCLIDE_BIN_LOOP
 
@@ -2927,7 +2932,7 @@ contains
     real(8) :: filter_weight        ! combined weight of all filters
     logical :: finished             ! found all valid bin combinations
     type(Material),    pointer :: mat
-    real(8) :: tmp_xs(BUFFER_NUCLIDE,BUFFER_REACTIONS)
+    type(VectorReal) :: tmp_xs
     ! Determine collision estimate of flux
     if (survival_biasing) then
       ! We need to account for the fact that some weight was already absorbed
@@ -3001,6 +3006,7 @@ contains
                 mat => materials(p % material)
 
                 ! Determine index of nuclide in Material % atom_density array
+              
                 j = mat % mat_nuclide_index(i_nuclide)
                 if (j == 0) cycle NUCLIDE_BIN_LOOP
 

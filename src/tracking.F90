@@ -58,7 +58,8 @@ contains
     real(8) :: distance               ! distance particle travels
     logical :: found_cell             ! found cell which particle is in?
     type(Material), pointer :: mat
-
+    
+    call buffer % tmp_xs % initialize(1)
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
       call write_message("Simulating Particle " // trim(to_str(p % id)))
@@ -89,6 +90,7 @@ contains
       idx = buffer % idx
       buffer % idx = idx + 1
       buffer % material(idx) = p % material
+      buffer_size = buffer%tmp_xs%size()
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -124,16 +126,17 @@ contains
         ! hasn't changed, we don't need to lookup cross sections again.
         if (p % material /= p % last_material .or. &
              p % sqrtkT /= p % last_sqrtkT) then 
-
+            
             call calculate_xs(p)
             if (idx == 1) then
             buffer % stride(idx) = n_nuclide * 7
             !reset counter
             counter = 0 
-            call buffer % tmp_xs % resize(n_nuclide,ZERO)
+            call buffer % tmp_xs % push_backk(buffer%stride(idx),ZERO)
             else
             buffer % stride(idx) = buffer % stride(idx-1) + n_nuclide * 7
-            call buffer%tmp_xs%resize(n_nuclide,ZERO)
+            call buffer%tmp_xs%push_backk(buffer%stride(idx)+&
+            buffer_size,ZERO)
             end if
             
             do i_nuclide=1, mat % n_nuclides
@@ -143,9 +146,9 @@ contains
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs % data(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                        buffer % tmp_xs % data(1) =  micro_xs(index_nuclide) % reaction(i_reaction)
                         counter = counter + 1
-                buffer % tmp_xs % data(counter) = micro_xs(index_nuclide) % fission           
+                buffer % tmp_xs % data(1) = micro_xs(index_nuclide) % fission           
                 end do
             end do
 
@@ -153,7 +156,7 @@ contains
             !this is the special case. 
             if (idx == 1) then
                 call calculate_xs(p)
-                call buffer % tmp_xs % resize(n_nuclide,ZERO)
+                call buffer % tmp_xs % push_backk(buffer%stride(idx),ZERO)
                 counter = 0
                 do i_nuclide=1, mat % n_nuclides
                    index_nuclide = mat % nuclide(i_nuclide)
@@ -162,9 +165,9 @@ contains
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs % data(counter) =  micro_xs(index_nuclide) % reaction(i_reaction)
+                        buffer % tmp_xs % data(1) =  micro_xs(index_nuclide) % reaction(i_reaction)
                         counter = counter + 1
-                buffer % tmp_xs % data(counter) = micro_xs(index_nuclide) % fission
+                buffer % tmp_xs % data(1) = micro_xs(index_nuclide) % fission
                 end do
             end do
             end if
@@ -172,13 +175,14 @@ contains
   
             !filled new elements with previous elements.
             if (idx > 1) then
-            call buffer%tmp_xs%resize(n_nuclide,ZERO)
+            call buffer%tmp_xs%push_backk(buffer%stride(idx)+&
+               buffer_size,ZERO)
                if (idx == 2) then
-               buffer % tmp_xs % data(buffer % stride(idx-1)+1:buffer % stride(idx)) &
-               = buffer % tmp_xs % data(1:buffer % stride(1))
+               !buffer % tmp_xs % data(buffer % stride(idx-1)+1:buffer % stride(idx)) &
+               != buffer % tmp_xs % data(1:buffer % stride(1))
                else
-               buffer % tmp_xs % data(buffer % stride(idx-1)+1:buffer % stride(idx)) &
-               = buffer % tmp_xs % data (buffer % stride(idx-2):buffer % stride(idx-1))
+               !buffer % tmp_xs % data(buffer % stride(idx-1)+1:buffer % stride(idx)) &
+               != buffer % tmp_xs % data (buffer % stride(idx-2):buffer % stride(idx-1))
                end if
             end if 
 
@@ -220,7 +224,6 @@ contains
 
       
       if (buffer % idx > BUFFER_SIZE) then
-        buffer_size = buffer%tmp_xs%size()
         call flush_buffer(buffer_size) 
       end if
       ! Advance particle
@@ -373,12 +376,18 @@ contains
   !real(8), pointer :: P(:) !to pass cross-sections of given mat at energy E.
   !real(8),target :: xs_to_pass(buffer_size)
   
-  do i=1,BUFFER_SIZE
+
+
+  !call score_tracklength_tally(buffer % material (1), &
+  !  buffer % distance(1),buffer % tmp_xs % data(1:buffer % stride(2)))
+
+  do i=2,BUFFER_SIZE
     !xs_to_pass = buffer % tmp_xs(:)
     !P => xs_to_pass
     !need to pass material ID, distance, and cross-section
-    call score_tracklength_tally(buffer % material (i), &
-    buffer % distance(i),buffer % tmp_xs)
+    !call score_tracklength_tally(buffer % material (i), &
+    !buffer % distance(i),buffer % tmp_xs % data(buffer % &
+    !stride(i-1)+1:buffer % stride(i)))
     !normal loop over tallies, filters, nuclides, scores
     !except now just pull material from buffer and cross-section
     !from tmp_xs
@@ -386,6 +395,7 @@ contains
   end do
     !clear buffer, don't know if this is the right way to go.
     call buffer % tmp_xs % clear()
+    call buffer % tmp_xs % resize(1)
     buffer % idx = 1
     !deallocate(buffer)
     !deallocate(micro_xs)

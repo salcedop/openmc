@@ -11,7 +11,7 @@ module tally_header
   use nuclide_header,      only: nuclide_dict
   use settings,            only: reduce_tallies, run_mode
   use source_header,       only: external_source
-  use stl_vector,          only: VectorInt,VectorReal
+  use stl_vector,          only: VectorInt,VectorReal,VectorReal2
   use string,              only: to_lower, to_f_string, str_to_int, to_str
   use tally_filter_header, only: TallyFilterContainer, filters, n_filters
   use tally_filter
@@ -48,7 +48,7 @@ module tally_header
     integer :: material(BUFFER_SIZE)
     integer :: stride(BUFFER_SIZE)
     real(8) :: distance(BUFFER_SIZE)
-    type(VectorReal) :: tmp_xs
+    type(VectorReal2) :: tmp_xs
 
   end type TallyBuffer
 

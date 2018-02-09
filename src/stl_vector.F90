@@ -77,6 +77,24 @@ module stl_vector
     procedure :: size => size_real
   end type VectorReal
 
+type, public :: VectorReal2
+    integer, private :: size_ = 0
+    integer, private :: capacity_ = 0
+    real(8), allocatable :: data(:)
+  contains
+    procedure :: capacity => capacity_real2
+    procedure :: clear => clear_real2
+    generic :: initialize => &
+         initialize_fill_real2
+    procedure, private :: initialize_fill_real2
+    procedure :: pop_back => pop_back_real2
+    procedure :: push_backk => push_back_real2
+    procedure :: reserve => reserve_real2
+    procedure :: resize => resize_real2
+    procedure :: shrink_to_fit => shrink_to_fit_real2
+    procedure :: size => size_real2
+  end type VectorReal2
+
   type, public :: VectorChar
     integer, private :: size_ = 0
     integer, private :: capacity_ = 0
@@ -236,6 +254,156 @@ contains
 
     size = this%size_
   end function size_int
+
+
+!===============================================================================
+! Implementation of VectorReal2
+!===============================================================================
+
+  pure function capacity_real2(this) result(capacity)
+    class(VectorReal2), intent(in) :: this
+    integer :: capacity
+
+    capacity = this%capacity_
+  end function capacity_real2
+
+  subroutine clear_real2(this)
+    class(VectorReal2), intent(inout) :: this
+
+    ! Since real is trivially destructible, we only need to set size to zero and
+    ! can leave capacity as is
+    this%size_ = 0
+    if (allocated(this % data)) then
+      this%capacity_ = size(this % data)
+    else
+      this%capacity_ = 0
+    end if
+  end subroutine clear_real2
+
+  subroutine initialize_fill_real2(this, n, val)
+    class(VectorReal2), intent(inout) :: this
+    integer, intent(in) :: n
+    real(8), optional, intent(in) :: val
+
+    real(8) :: val_
+
+    ! If no value given, fill the vector with zeros
+    if (present(val)) then
+      val_ = val
+    else
+      val_ = 0
+    end if
+
+    if (allocated(this%data)) deallocate(this%data)
+
+    allocate(this%data(n), SOURCE=val_)
+    this%size_ = n
+    this%capacity_ = n
+  end subroutine initialize_fill_real2
+
+  subroutine pop_back_real2(this)
+    class(VectorReal2), intent(inout) :: this
+    if (this%size_ > 0) this%size_ = this%size_ - 1
+  end subroutine pop_back_real2
+
+  subroutine push_back_real2(this, N, val)
+    class(VectorReal2), intent(inout) :: this
+    integer,intent(in) :: N
+    real(8), intent(in) :: val
+    integer :: original_size
+    integer :: capacity
+    real(8), allocatable :: data(:)
+
+    if (this%capacity_ == this%size_) then
+      ! Create new data array that is GROWTH_FACTOR larger. Note that
+      if (this%capacity_ == 0) then
+        capacity = 8
+      else
+        capacity = int(GROWTH_FACTOR*N*this%capacity_)
+      end if
+      allocate(data(capacity))
+
+      ! Copy existing elements
+      if (this%size_ > 0) data(1:this%size_) = this%data
+
+      ! Move allocation
+      call move_alloc(FROM=data, TO=this%data)
+      this%capacity_ = capacity
+    end if
+
+    !save original size
+    if (this%size_ == 1) then
+    original_size = this%size_ - 1
+    else
+    original_size = this%size_
+    end if
+    ! Increase size of vector by N and set new element
+    this%size_ = this%size_ + N
+    
+    this%data(original_size+1:this%size_) = val
+  end subroutine push_back_real2
+
+  subroutine reserve_real2(this, n)
+    class(VectorReal2), intent(inout) :: this
+    integer, intent(in) :: n
+
+    real(8), allocatable :: data(:)
+
+    if (n > this%capacity_) then
+      allocate(data(n))
+
+      ! Copy existing elements
+      if (this%size_ > 0) data(1:this%size_) = this%data(1:this%size_)
+
+      ! Move allocation
+      call move_alloc(FROM=data, TO=this%data)
+      this%capacity_ = n
+    end if
+  end subroutine reserve_real2
+
+  subroutine resize_real2(this, n, val)
+    class(VectorReal2), intent(inout) :: this
+    integer, intent(in) :: n
+    real(8), intent(in), optional :: val
+
+    if (n < this%size_) then
+      this%size_ = n
+    elseif (n > this%size_) then
+      ! If requested size is greater than capacity, first reserve that many
+      ! elements
+      if (n > this%capacity_) call this%reserve(n)
+
+      ! Fill added elements with specified value and increase size
+      if (present(val)) this%data(this%size_ + 1 : n) = val
+      this%size_ = n
+    end if
+
+  end subroutine resize_real2
+
+  subroutine shrink_to_fit_real2(this)
+    class(VectorReal2), intent(inout) :: this
+
+    real(8), allocatable :: data(:)
+
+    if (this%capacity_ > this%size_) then
+      if (this%size_ > 0) then
+        allocate(data(this%size_))
+        data(:) = this%data(1:this%size_)
+        call move_alloc(FROM=data, TO=this%data)
+        this%capacity_ = this%size_
+      else
+        if (allocated(this%data)) deallocate(this%data)
+      end if
+    end if
+  end subroutine shrink_to_fit_real2
+
+  pure function size_real2(this) result(size)
+    class(VectorReal2), intent(in) :: this
+    integer :: size
+
+    size = this%size_
+  end function size_real2
+
 
 !===============================================================================
 ! Implementation of VectorReal

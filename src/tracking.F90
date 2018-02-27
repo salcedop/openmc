@@ -128,6 +128,7 @@ contains
                buffer % xs_info(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
                buffer % xs_info(idx,nuc_id,2) = micro_xs(nuc_id)%interp_factor
                buffer % xs_info(idx,nuc_id,3) = micro_xs(nuc_id)%index_temp
+               buffer % double_info(idx,nuc_id) = micro_xs(nuc_id)%fission
             end do         
         else
             
@@ -140,12 +141,14 @@ contains
                buffer % xs_info(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
                buffer % xs_info(idx,nuc_id,2) = micro_xs(nuc_id)%interp_factor
                buffer % xs_info(idx,nuc_id,3) = micro_xs(nuc_id)%index_temp
+               buffer % double_info(idx,nuc_id) = micro_xs(nuc_id)%fission
             end do 
             buffer % gen_info(idx,2) = 0
             
             else 
 
                  buffer % xs_info(idx,:,:) = buffer % xs_info(idx-1,:,:)
+                 buffer % double_info(idx,:) = buffer % double_info(idx-1,:)
                  buffer % gen_info(idx,2) = 1
 
             end if
@@ -340,6 +343,10 @@ contains
   integer :: j
   integer :: k
   integer :: event_nuc
+  integer :: i_grid
+  integer :: f
+  integer :: i_temp
+  integer :: i_rxn
   !type(Nuclide),pointer :: i_nuclide
   !type(Material), pointer :: mat 
   real(8) :: tmp_xs(BUFFER_NUCLIDE,7)
@@ -365,9 +372,27 @@ contains
             tmp_xs(event_nuc,:) = aux_xs(event_nuc,:)!tmp_xs(event_nuc,:)
             !end if
          else
-            tmp_xs(event_nuc,:) = depletion_xs_const(i_nuclide,&
-            buffer%xs_info(i,event_nuc,1),buffer%xs_info(i,event_nuc,2),&
-            buffer%xs_info(i,event_nuc,3))
+            do j=1,6
+
+               i_rxn = i_nuclide % reaction_index(DEPLETION_RX(j))
+               i_grid = buffer % xs_info(i,event_nuc,1)
+               f = buffer % xs_info(i,event_nuc,2)
+               i_temp = buffer % xs_info(i,event_nuc,3)
+              if (i_rxn > 0)  then
+              associate (xs => i_nuclide % reactions(i_rxn) % xs(i_temp))
+                if (i_grid >= xs % threshold) then
+                  tmp_xs(event_nuc,j) = (ONE - f) * &
+                       xs % value(i_grid - xs % threshold + 1) + &
+                       f * xs % value(i_grid - xs % threshold + 2)
+                end if
+              end associate
+               end if
+            end do
+
+            !depletion_xs_const(i_nuclide,&
+            !buffer%xs_info(i,event_nuc,1),buffer%xs_info(i,event_nuc,2),&
+            !buffer%xs_info(i,event_nuc,3))
+            tmp_xs(event_nuc,7) = buffer % double_info(i,event_nuc)
          end if
           end associate
       end do
@@ -405,7 +430,7 @@ contains
        integer, intent(in) :: i_temp
        integer :: j
        integer :: i_rxn
-       real(8) :: mi_xs(7)
+       real(8) :: mi_xs(6)
 
        !if(.not. allocated(mi_xs)) allocate(mi_xs(7))
         ! Depletion-related reactions
@@ -428,14 +453,6 @@ contains
                end if
           end do
           
-          associate(xs => nuc % sum_xs(i_temp))
-        if (nuc % fissionable) then
-           mi_xs(7) = (ONE - f) * xs % fission(i_grid) &
-                 + f * xs % fission(i_grid + 1)
-        else
-            mi_xs(7) = ZERO
-        end if
-          end associate
 
     end function depletion_xs_const
 

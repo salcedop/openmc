@@ -50,6 +50,7 @@ module tally_header
     ! 1- mat_id, 2-flag
     integer :: gen_info(Buffer_SIZE,2)=0
     real(8) :: distance(BUFFER_SIZE)
+    real(8) :: double_info(BUFFER_SIZE,BUFFER_NUCLIDE)
     
   end type TallyBuffer
 

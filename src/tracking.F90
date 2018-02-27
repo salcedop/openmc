@@ -41,10 +41,10 @@ contains
     
 
     integer :: idx
-    integer :: i_nuclide
-    integer :: i_reaction
-    integer :: index_nuclide
-    
+    integer :: nuc
+    integer :: nuc_id
+    integer :: f
+     
     integer :: j                      ! coordinate level
     integer :: next_level             ! next coordinate level to check
     integer :: surface_crossed        ! surface which particle is on
@@ -83,9 +83,9 @@ contains
 
     EVENT_LOOP: do
       ! Store pre-collision particle properties
-      idx = buffer % idx
+      idx = buffer % idx 
       buffer % idx = idx + 1
-      buffer % material(idx) = p % material
+      buffer % gen_info(idx,1) = p % material
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -120,48 +120,34 @@ contains
         ! hasn't changed, we don't need to lookup cross sections again.
         if (p % material /= p % last_material .or. &
              p % sqrtkT /= p % last_sqrtkT) then 
-
+             buffer % gen_info(idx,2) = 0
             call calculate_xs(p)
-            do i_nuclide=1, mat % n_nuclides
-                index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1, 6
-                        !by computing tmp_xs at this stage, I think we don't
-                        !have to worry about 
-                        !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) =  micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission           
-                end do
-            end do
-
+            
+            do nuc = 1,mat % n_nuclides
+               nuc_id = mat % nuclide(nuc)
+               buffer % xs_info(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
+               buffer % xs_info(idx,nuc_id,2) = micro_xs(nuc_id)%interp_factor
+               buffer % xs_info(idx,nuc_id,3) = micro_xs(nuc_id)%index_temp
+            end do         
         else
             
             !filled new elements with previous elements.
             if (idx == 1) then
-                !write(*,*) "toy aqui"
-                call calculate_xs(p)
-            do i_nuclide=1, mat % n_nuclides
-                index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1, 6
-                        !by computing tmp_xs at this stage, I think we don't
-                        !have to worry about 
-                        !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission
-                end do
-            end do
-            end if
-            if (idx > 1) then
-            do i_nuclide=1, mat % n_nuclides
-                index_nuclide = mat % nuclide(i_nuclide)
-                do i_reaction=1, 6
-                        !by computing tmp_xs at this stage, I think we don't
-                        !have to worry about 
-                        !saving the interpolation_factor, index_grid, etc.
-                        !write(*,*) idx
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = buffer % tmp_xs(idx-1,index_nuclide,i_reaction) 
-                buffer % tmp_xs(idx,index_nuclide,7) = buffer % tmp_xs(idx-1,index_nuclide,7) 
-                end do
-            end do
+                
+            call calculate_xs(p)
+            do nuc = 1,mat % n_nuclides
+               nuc_id = mat % nuclide(nuc)
+               buffer % xs_info(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
+               buffer % xs_info(idx,nuc_id,2) = micro_xs(nuc_id)%interp_factor
+               buffer % xs_info(idx,nuc_id,3) = micro_xs(nuc_id)%index_temp
+            end do 
+            buffer % gen_info(idx,2) = 0
+            
+            else 
+
+                 buffer % xs_info(idx,:,:) = buffer % xs_info(idx-1,:,:)
+                 buffer % gen_info(idx,2) = 1
+
             end if
 
         end if
@@ -351,27 +337,107 @@ contains
 
   type(TallyBuffer), intent(inout) :: buffer
   integer :: i
-  real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
-  real(8),target :: xs_to_pass(BUFFER_NUCLIDE,BUFFER_REACTIONS)
+  integer :: j
+  integer :: k
+  integer :: event_nuc
+  !type(Nuclide),pointer :: i_nuclide
+  !type(Material), pointer :: mat 
+  real(8) :: tmp_xs(BUFFER_NUCLIDE,7)
+  real(8) :: aux_xs(BUFFER_NUCLIDE,7)
+  !real(8),pointer :: P(:,:)
+  !write(*,*) "flush"
+  !allocate(tmp_xs(BUFFER_NUCLIDE,7))
+  !allocate(aux_xs(BUFFER_NUCLIDE,7))
+  !if (.not. allocated(aux_xs)) allocate(aux_xs(BUFFER_NUCLIDE,7))
   
   do i=1,BUFFER_SIZE
-    xs_to_pass = buffer % tmp_xs(i,:,:)
-    P => xs_to_pass
-    
-    !need to pass material ID, distance, and cross-section
-    call score_tracklength_tally(buffer % material (i), buffer % distance(i),P)
-    !normal loop over tallies, filters, nuclides, scores
-    !except now just pull material from buffer and cross-section
-    !from tmp_xs
-    
+
+      associate(mat => materials(buffer % gen_info(i,1)))
+      tmp_xs(:,:) = ZERO
+      do k=1,mat % n_nuclides
+         event_nuc = mat % nuclide(k)
+         associate(i_nuclide => nuclides(event_nuc))
+         !buffer % gen_info(i,2) 
+         if (buffer % gen_info(i,2)==1) then
+            !if(i == 1) then
+            !   tmp_xs(i,:,:) = aux_xs(:,:)
+            !else
+            tmp_xs(event_nuc,:) = aux_xs(event_nuc,:)!tmp_xs(event_nuc,:)
+            !end if
+         else
+            tmp_xs(event_nuc,:) = depletion_xs_const(i_nuclide,&
+            buffer%xs_info(i,event_nuc,1),buffer%xs_info(i,event_nuc,2),&
+            buffer%xs_info(i,event_nuc,3))
+         end if
+          end associate
+      end do
+      call score_tracklength_tally(buffer % gen_info (i,1), buffer % &
+       distance(i),tmp_xs)
+       aux_xs(:,:) = tmp_xs(:,:)
+      end associate
   end do
   
-    buffer % tmp_xs(:,:,:) = 0.0
+  !flushing
+    
+  !do i=1,BUFFER_SIZE
+    
+  !  P => tmp_xs(i,:,:)  
+    !need to pass material ID, distance, and cross-sections
+  !  call score_tracklength_tally(buffer % gen_info (i,1), buffer % &
+  !  distance(i),P)
+  !end do
+  
+    !deallocate(tmp_xs)
+    !deallocate(aux_xs)
     buffer % idx = 1
-    !deallocate(buffer)
-    !deallocate(micro_xs)
-     
+      
   end subroutine flush_buffer
+
+!===============================================================================
+! constructing depletion cross-sections
+!===============================================================================
+
+   function depletion_xs_const(nuc,i_grid,f,i_temp) result (mi_xs)
+
+       type(Nuclide), intent(in) :: nuc
+       integer, intent(in) :: i_grid
+       integer, intent(in) :: f
+       integer, intent(in) :: i_temp
+       integer :: j
+       integer :: i_rxn
+       real(8) :: mi_xs(7)
+
+       !if(.not. allocated(mi_xs)) allocate(mi_xs(7))
+        ! Depletion-related reactions
+        do j = 1, 6
+        ! Initialize reaction xs to zero
+            mi_xs(j) = ZERO
+
+            ! If reaction is present and energy is greater than threshold, set
+            ! the reaction xs appropriately
+            
+            i_rxn = nuc % reaction_index(DEPLETION_RX(j))
+              if (i_rxn > 0)  then
+              associate (xs => nuc % reactions(i_rxn) % xs(i_temp))
+                if (i_grid >= xs % threshold) then
+                  mi_xs(j) = (ONE - f) * &
+                       xs % value(i_grid - xs % threshold + 1) + &
+                       f * xs % value(i_grid - xs % threshold + 2)
+                end if
+              end associate
+               end if
+          end do
+          
+          associate(xs => nuc % sum_xs(i_temp))
+        if (nuc % fissionable) then
+           mi_xs(7) = (ONE - f) * xs % fission(i_grid) &
+                 + f * xs % fission(i_grid + 1)
+        else
+            mi_xs(7) = ZERO
+        end if
+          end associate
+
+    end function depletion_xs_const
 
 !===============================================================================
 ! CROSS_SURFACE handles all surface crossings, whether the particle leaks out of

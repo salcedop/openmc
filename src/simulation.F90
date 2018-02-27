@@ -75,7 +75,7 @@ contains
     integer(C_INT) :: retval
     type(Particle) :: p
     integer(8)     :: i_work
-
+    type(TallyBuffer) :: buffer
     ! Make sure simulation has been initialized
     if (.not. simulation_initialized) then
       retval = -3

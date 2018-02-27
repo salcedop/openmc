@@ -86,8 +86,10 @@ module nuclide_header
     type(MultipoleArray), pointer :: multipole => null()
 
     ! Reactions
+
     type(Reaction), allocatable :: reactions(:)
 
+    !real(8) :: reaction(size(DEPLETION_RX))
     ! Array that maps MT values to index in reactions; used at tally-time. Note
     ! that ENDF-102 does not assign any MT values above 891.
     integer :: reaction_index(891)
@@ -123,7 +125,7 @@ module nuclide_header
 
     ! Cross sections for depletion reactions (note that these are not stored in
     ! macroscopic cache)
-    real(8) :: reaction(size(DEPLETION_RX))
+    !real(8) :: reaction(size(DEPLETION_RX))
 
     ! Indicies and factors needed to compute cross sections from the data tables
     integer :: index_grid        ! Index on nuclide energy grid

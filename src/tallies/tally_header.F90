@@ -43,13 +43,14 @@ module tally_header
   
   
   type,public :: TallyBuffer
-
+    ! first index handles discontinueties
     integer :: idx = 1
-    integer :: material(BUFFER_SIZE)
-
+    !1-index,2-int_factor, 3-itemp
+    integer :: xs_info(BUFFER_SIZE,BUFFER_NUCLIDE,3) 
+    ! 1- mat_id, 2-flag
+    integer :: gen_info(Buffer_SIZE,2)=0
     real(8) :: distance(BUFFER_SIZE)
-    real(8) :: tmp_xs(BUFFER_SIZE,BUFFER_NUCLIDE,BUFFER_REACTIONS) = 0.0
-
+    
   end type TallyBuffer
 
   type, public :: TallyObject

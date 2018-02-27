@@ -192,13 +192,13 @@ contains
           micro_xs(i_nuclide) % nu_fission = ZERO
         end if
 
-        if (need_depletion_rx) then
+        !if (need_depletion_rx) then
           ! Initialize all reaction cross sections to zero
-          micro_xs(i_nuclide) % reaction(:) = ZERO
+        !  micro_xs(i_nuclide) % reaction(:) = ZERO
 
           ! Only non-zero reaction is (n,gamma)
-          micro_xs(i_nuclide) % reaction(4) = sig_a - sig_f
-        end if
+        !  micro_xs(i_nuclide) % reaction(4) = sig_a - sig_f
+        !end if
 
         ! Ensure these values are set
         ! Note, the only time either is used is in one of 4 places:
@@ -290,27 +290,6 @@ contains
             micro_xs(i_nuclide) % nu_fission      = ZERO
           end if
         end associate
-
-        ! Depletion-related reactions
-        if (need_depletion_rx) then
-          do j = 1, 6
-            ! Initialize reaction xs to zero
-            micro_xs(i_nuclide) % reaction(j) = ZERO
-
-            ! If reaction is present and energy is greater than threshold, set
-            ! the reaction xs appropriately
-            i_rxn = nuc % reaction_index(DEPLETION_RX(j))
-            if (i_rxn > 0) then
-              associate (xs => nuc % reactions(i_rxn) % xs(i_temp))
-                if (i_grid >= xs % threshold) then
-                  micro_xs(i_nuclide) % reaction(j) = (ONE - f) * &
-                       xs % value(i_grid - xs % threshold + 1) + &
-                       f * xs % value(i_grid - xs % threshold + 2)
-                end if
-              end associate
-            end if
-          end do
-        end if
 
       end if
 

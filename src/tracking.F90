@@ -145,7 +145,7 @@ contains
             
             else 
 
-                 buffer % xs_info(idx,:,:) = buffer % xs_info(idx-1,:,:)
+                 !buffer % xs_info(idx,:,:) = buffer % xs_info(idx-1,:,:)
                  buffer % gen_info(idx,2) = 1
 
             end if
@@ -340,6 +340,10 @@ contains
   integer :: j
   integer :: k
   integer :: event_nuc
+  integer :: i_rxn
+  integer :: i_grid
+  integer :: f
+  integer :: i_temp
   !type(Nuclide),pointer :: i_nuclide
   !type(Material), pointer :: mat 
   real(8) :: tmp_xs(BUFFER_NUCLIDE,7)
@@ -356,8 +360,9 @@ contains
       tmp_xs(:,:) = ZERO
       do k=1,mat % n_nuclides
          event_nuc = mat % nuclide(k)
+         !buffer % gen_info(i,2)
+         
          associate(i_nuclide => nuclides(event_nuc))
-         !buffer % gen_info(i,2) 
          if (buffer % gen_info(i,2)==1) then
             !if(i == 1) then
             !   tmp_xs(i,:,:) = aux_xs(:,:)
@@ -365,9 +370,37 @@ contains
             tmp_xs(event_nuc,:) = aux_xs(event_nuc,:)!tmp_xs(event_nuc,:)
             !end if
          else
-            tmp_xs(event_nuc,:) = depletion_xs_const(i_nuclide,&
-            buffer%xs_info(i,event_nuc,1),buffer%xs_info(i,event_nuc,2),&
-            buffer%xs_info(i,event_nuc,3))
+            
+            do j=1,6
+
+               i_rxn = i_nuclide % reaction_index(DEPLETION_RX(j))
+               i_grid = buffer % xs_info(i,event_nuc,1)
+               f = buffer % xs_info(i,event_nuc,2)
+               i_temp = buffer % xs_info(i,event_nuc,3)
+              if (i_rxn > 0)  then
+              associate (xs => i_nuclide % reactions(i_rxn) % xs(i_temp))
+                if (i_grid >= xs % threshold) then
+                  tmp_xs(event_nuc,j) = (ONE - f) * &
+                      xs % value(i_grid - xs % threshold + 1) + &
+                       f * xs % value(i_grid - xs % threshold + 2)
+                end if
+              end associate
+               end if
+            end do
+                
+            associate(xs => i_nuclide % sum_xs(i_temp))
+            if (i_nuclide % fissionable) then
+            tmp_xs(event_nuc,7) = (ONE - f) * xs % fission(i_grid) &
+                 + f * xs % fission(i_grid + 1)
+            else
+             tmp_xs(event_nuc,7) = ZERO
+            end if
+            
+            end associate
+          
+            !tmp_xs(event_nuc,:) = depletion_xs_const(i_nuclide,&
+            !buffer%xs_info(i,event_nuc,1),buffer%xs_info(i,event_nuc,2),&
+            !buffer%xs_info(i,event_nuc,3))
          end if
           end associate
       end do

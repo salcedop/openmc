@@ -147,9 +147,12 @@ contains
             
             else 
 
-                 buffer % xs_info(idx,:,:) = buffer % xs_info(idx-1,:,:)
-                 buffer % double_info(idx,:) = buffer % double_info(idx-1,:)
-                 buffer % gen_info(idx,2) = 1
+            !do nuc=1,mat%n_nuclides
+                 !nuc_id = mat % nuclide(nuc)
+                 !buffer % xs_info(idx,nuc_id,:) = buffer % xs_info(idx-1,nuc_id,:)
+                 !buffer % double_info(idx,nuc_id) = buffer % double_info(idx-1,nuc_id)
+            !end do
+            buffer % gen_info(idx,2) = 1
 
             end if
 

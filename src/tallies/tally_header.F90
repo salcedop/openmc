@@ -46,7 +46,7 @@ module tally_header
     ! first index handles discontinueties
     integer :: idx = 1
     !1-index,2-int_factor, 3-itemp
-    integer :: xs_info(BUFFER_SIZE,BUFFER_NUCLIDE,3) 
+    integer :: xs_info(BUFFER_SIZE,BUFFER_NUCLIDE,3) = 0
     ! 1- mat_id, 2-flag
     integer :: gen_info(Buffer_SIZE,2)=0
     real(8) :: distance(BUFFER_SIZE)

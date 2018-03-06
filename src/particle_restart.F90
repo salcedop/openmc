@@ -60,7 +60,7 @@ contains
     call set_particle_seed(particle_seed)
 
     ! Transport neutron
-    call transport(p)
+    call transport(p,buffer)
 
     ! Write output if particle made it
     call print_particle(p)

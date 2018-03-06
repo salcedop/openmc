@@ -111,7 +111,7 @@ contains
       
         ! transport particle
         
-        call transport(p)
+        call transport(p,buffer)
 
       end do PARTICLE_LOOP
 !$omp end parallel do

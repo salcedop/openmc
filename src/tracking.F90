@@ -34,10 +34,10 @@ contains
 ! TRANSPORT encompasses the main logic for moving a particle through geometry.
 !===============================================================================
 
-  subroutine transport(p)
+  subroutine transport(p,buffer)
 
     type(Particle), intent(inout) :: p
-    type(TallyBuffer) :: buffer
+    type(TallyBuffer),intent(inout) :: buffer
     
 
     integer :: idx
@@ -85,7 +85,6 @@ contains
       ! Store pre-collision particle properties
       idx = buffer % idx 
       buffer % idx = idx + 1
-      buffer % gen_info(idx,1) = p % material
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -113,6 +112,8 @@ contains
       ! Score track-length tallies
 
       ! Calculate microscopic and macroscopic cross sections
+      
+      buffer % gen_info(idx,1) = p % material
       if (run_CE) then
 
         mat => materials(p % material)
@@ -355,7 +356,9 @@ contains
   !if (.not. allocated(aux_xs)) allocate(aux_xs(BUFFER_NUCLIDE,7))
   
   do i=1,BUFFER_SIZE
-
+      !write(*,*) i
+      !write(*,*) "----"
+      !write(*,*) buffer % gen_info(i,1)
       associate(mat => materials(buffer % gen_info(i,1)))
       tmp_xs(:,:) = ZERO
       do k=1,mat % n_nuclides

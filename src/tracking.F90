@@ -370,8 +370,10 @@ contains
             !if(i == 1) then
             !   tmp_xs(i,:,:) = aux_xs(:,:)
             !else
-            tmp_xs(event_nuc,:) = aux_xs(event_nuc,:)!tmp_xs(event_nuc,:)
-            !end if
+            do j=1,6
+               tmp_xs(event_nuc,j) = aux_xs(event_nuc,j)
+            end do!tmp_xs(event_nuc,:)
+            tmp_xs(event_nuc,7) = aux_xs(event_nuc,7)
          else
             
             do j=1,6
@@ -386,6 +388,7 @@ contains
                   tmp_xs(event_nuc,j) = (ONE - f) * &
                       xs % value(i_grid - xs % threshold + 1) + &
                        f * xs % value(i_grid - xs % threshold + 2)
+                  aux_xs(event_nuc,j) = tmp_xs(event_nuc,j)
                 end if
               end associate
                end if
@@ -398,7 +401,7 @@ contains
             else
              tmp_xs(event_nuc,7) = ZERO
             end if
-            
+            aux_xs(event_nuc,7) = tmp_xs(event_nuc,7)
             end associate
           
             !tmp_xs(event_nuc,:) = depletion_xs_const(i_nuclide,&
@@ -409,7 +412,7 @@ contains
       end do
       call score_tracklength_tally(buffer % gen_info (i,1), buffer % &
        distance(i),tmp_xs)
-       aux_xs(:,:) = tmp_xs(:,:)
+       !aux_xs(:,:) = tmp_xs(:,:)
       end associate
   end do
   

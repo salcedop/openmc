@@ -334,9 +334,9 @@ contains
 ! Flushing buffer by calling score_tracklength
 !===============================================================================
 
-  subroutine flush_buffer(buffer)
+  subroutine flush_buffer(b)
 
-  type(TallyBuffer), intent(inout) :: buffer
+  type(TallyBuffer), intent(inout) :: b
   integer :: i
   integer :: j
   integer :: k
@@ -359,7 +359,9 @@ contains
       !write(*,*) i
       !write(*,*) "----"
       !write(*,*) buffer % gen_info(i,1)
+      associate(buffer => b)
       associate(mat => materials(buffer % gen_info(i,1)))
+      !associate(mat => materials(buffer % gen_info(i,1)))
       tmp_xs(:,:) = ZERO
       do k=1,mat % n_nuclides
          event_nuc = mat % nuclide(k)
@@ -414,6 +416,7 @@ contains
        distance(i),tmp_xs)
        !aux_xs(:,:) = tmp_xs(:,:)
       end associate
+      end associate
   end do
   
   !flushing
@@ -428,7 +431,7 @@ contains
   
     !deallocate(tmp_xs)
     !deallocate(aux_xs)
-    buffer % idx = 1
+    b % idx = 1
       
   end subroutine flush_buffer
 

@@ -44,11 +44,11 @@ module tally_header
   
   type,public :: TallyBuffer
 
-    integer :: idx = 1
+    integer :: idx
     integer :: material(BUFFER_SIZE)
 
     real(8) :: distance(BUFFER_SIZE)
-    real(8) :: tmp_xs(BUFFER_SIZE,BUFFER_NUCLIDE,BUFFER_REACTIONS) = 0.0
+    real(8) :: tmp_xs(BUFFER_SIZE,BUFFER_NUCLIDE,BUFFER_REACTIONS)
 
   end type TallyBuffer
 

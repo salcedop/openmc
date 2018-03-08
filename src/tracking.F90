@@ -55,7 +55,8 @@ contains
     real(8) :: distance               ! distance particle travels
     logical :: found_cell             ! found cell which particle is in?
     type(Material), pointer :: mat
-
+    
+    buffer % idx = 1
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
       call write_message("Simulating Particle " // trim(to_str(p % id)))
@@ -85,7 +86,6 @@ contains
       ! Store pre-collision particle properties
       idx = buffer % idx
       buffer % idx = idx + 1
-      buffer % material(idx) = p % material
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -112,6 +112,7 @@ contains
       ! check to see if buffer can be flushed
       ! Score track-length tallies
 
+      buffer % material(idx) = p % material
       ! Calculate microscopic and macroscopic cross sections
       if (run_CE) then
 

@@ -204,6 +204,7 @@ contains
       
       if (buffer % idx > BUFFER_SIZE) then
         call flush_buffer(buffer) 
+        buffer % idx = 1
       end if
       ! Advance particle
       do j = 1, p % n_coord
@@ -330,6 +331,8 @@ contains
           ! Enter new particle in particle track file
           if (p % write_track) call add_particle_track()
         else
+          call flush_buffer(buffer)
+          buffer % idx = 1
           exit EVENT_LOOP
         end if
       end if
@@ -350,7 +353,7 @@ contains
 
   subroutine flush_buffer(buffer)
 
-  type(TallyBuffer), intent(inout) :: buffer
+  type(TallyBuffer), intent(in) :: buffer
   integer :: i
   real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
   real(8),target :: xs_to_pass(BUFFER_NUCLIDE,BUFFER_REACTIONS)
@@ -367,8 +370,8 @@ contains
     
   end do
   
-    buffer % tmp_xs(:,:,:) = 0.0
-    buffer % idx = 1
+    !buffer % tmp_xs(:,:,:) = 0.0
+    !buffer % idx = 1
     !deallocate(buffer)
     !deallocate(micro_xs)
      

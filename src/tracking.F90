@@ -34,10 +34,10 @@ contains
 ! TRANSPORT encompasses the main logic for moving a particle through geometry.
 !===============================================================================
 
-  subroutine transport(p,buffer)
+  subroutine transport(p)
 
     type(Particle), intent(inout) :: p
-    type(TallyBuffer),intent(inout) :: buffer
+    type(TallyBuffer) :: buffer
     
 
     integer :: idx
@@ -55,6 +55,9 @@ contains
     real(8) :: distance               ! distance particle travels
     logical :: found_cell             ! found cell which particle is in?
     type(Material), pointer :: mat
+
+    buffer % idx = 1
+
 
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
@@ -126,9 +129,9 @@ contains
             
             do nuc = 1,mat % n_nuclides
                nuc_id = mat % nuclide(nuc)
-               buffer % xs_info(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
-               buffer % xs_info(idx,nuc_id,2) = micro_xs(nuc_id)%interp_factor
-               buffer % xs_info(idx,nuc_id,3) = micro_xs(nuc_id)%index_temp
+               buffer % xs_index(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
+               buffer % xs_index(idx,nuc_id,2) = micro_xs(nuc_id)%index_temp
+               buffer % interp_f(idx,nuc_id) = micro_xs(nuc_id)%interp_factor
             end do         
         else
             
@@ -138,9 +141,9 @@ contains
             call calculate_xs(p)
             do nuc = 1,mat % n_nuclides
                nuc_id = mat % nuclide(nuc)
-               buffer % xs_info(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
-               buffer % xs_info(idx,nuc_id,2) = micro_xs(nuc_id)%interp_factor
-               buffer % xs_info(idx,nuc_id,3) = micro_xs(nuc_id)%index_temp
+               buffer % xs_index(idx,nuc_id,1) = micro_xs(nuc_id)%index_grid
+               buffer % xs_index(idx,nuc_id,2) = micro_xs(nuc_id)%index_temp
+               buffer % interp_f(idx,nuc_id) = micro_xs(nuc_id)%interp_factor
             end do 
             buffer % gen_info(idx,2) = 0
             
@@ -189,7 +192,11 @@ contains
 
       
       if (buffer % idx > BUFFER_SIZE) then
-        call flush_buffer(buffer) 
+        associate (b=>buffer)
+        call flush_buffer(b)
+        end associate
+        buffer % idx = 1 
+
       end if
       ! Advance particle
       do j = 1, p % n_coord
@@ -316,6 +323,10 @@ contains
           ! Enter new particle in particle track file
           if (p % write_track) call add_particle_track()
         else
+          associate(b=>buffer)
+          call flush_buffer(b)
+          end associate
+          buffer % idx = 1
           exit EVENT_LOOP
         end if
       end if
@@ -336,7 +347,7 @@ contains
 
   subroutine flush_buffer(b)
 
-  type(TallyBuffer), intent(inout) :: b
+  type(TallyBuffer),intent(in) :: b
   integer :: i
   integer :: j
   integer :: k
@@ -345,21 +356,25 @@ contains
   integer :: i_grid
   integer :: f
   integer :: i_temp
+  
   !type(Nuclide),pointer :: i_nuclide
   !type(Material), pointer :: mat 
   real(8) :: tmp_xs(BUFFER_NUCLIDE,7)
   real(8) :: aux_xs(BUFFER_NUCLIDE,7)
+  
   !real(8),pointer :: P(:,:)
   !write(*,*) "flush"
   !allocate(tmp_xs(BUFFER_NUCLIDE,7))
   !allocate(aux_xs(BUFFER_NUCLIDE,7))
   !if (.not. allocated(aux_xs)) allocate(aux_xs(BUFFER_NUCLIDE,7))
   
-  do i=1,BUFFER_SIZE
+  associate(buffer=>b)
+  
+  do i=1,buffer%idx-1
       !write(*,*) i
       !write(*,*) "----"
       !write(*,*) buffer % gen_info(i,1)
-      associate(buffer => b)
+    
       associate(mat => materials(buffer % gen_info(i,1)))
       !associate(mat => materials(buffer % gen_info(i,1)))
       tmp_xs(:,:) = ZERO
@@ -381,9 +396,9 @@ contains
             do j=1,6
 
                i_rxn = i_nuclide % reaction_index(DEPLETION_RX(j))
-               i_grid = buffer % xs_info(i,event_nuc,1)
-               f = buffer % xs_info(i,event_nuc,2)
-               i_temp = buffer % xs_info(i,event_nuc,3)
+               i_grid = buffer % xs_index(i,event_nuc,1)
+               f = buffer % interp_f(i,event_nuc)
+               i_temp = buffer % xs_index(i,event_nuc,2)
               if (i_rxn > 0)  then
               associate (xs => i_nuclide % reactions(i_rxn) % xs(i_temp))
                 if (i_grid >= xs % threshold) then
@@ -412,13 +427,14 @@ contains
          end if
           end associate
       end do
+      associate(P=>tmp_xs)
       call score_tracklength_tally(buffer % gen_info (i,1), buffer % &
-       distance(i),tmp_xs)
+       distance(i),P)
        !aux_xs(:,:) = tmp_xs(:,:)
       end associate
       end associate
   end do
-  
+      end associate
   !flushing
     
   !do i=1,BUFFER_SIZE
@@ -431,7 +447,7 @@ contains
   
     !deallocate(tmp_xs)
     !deallocate(aux_xs)
-    b % idx = 1
+    
       
   end subroutine flush_buffer
 

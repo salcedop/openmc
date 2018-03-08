@@ -44,10 +44,11 @@ module tally_header
   
   type,public :: TallyBuffer
     ! first index handles discontinueties
-    integer :: idx = 1
+    integer :: idx 
     !1-index,2-int_factor, 3-itemp
-    integer :: xs_info(BUFFER_SIZE,BUFFER_NUCLIDE,3)=0 
+    integer :: xs_index(BUFFER_SIZE,BUFFER_NUCLIDE,2) 
     ! 1- mat_id, 2-flag
+    real(8) :: interp_f(BUFFER_SIZE,BUFFER_NUCLIDE)
     integer :: gen_info(Buffer_SIZE,2)=0
     real(8) :: distance(BUFFER_SIZE)
     

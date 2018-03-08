@@ -3048,15 +3048,15 @@ contains
                  &please remove")
           case ('n2n', '(n,2n)')
             t % score_bins(j) = N_2N
-            t % depletion_rx = .true.
+            t % depletion_rx = .false.
 
           case ('n3n', '(n,3n)')
             t % score_bins(j) = N_3N
-            t % depletion_rx = .true.
+            t % depletion_rx = .false.
 
           case ('n4n', '(n,4n)')
             t % score_bins(j) = N_4N
-            t % depletion_rx = .true.
+            t % depletion_rx = .false.
 
           case ('absorption')
             t % score_bins(j) = SCORE_ABSORPTION
@@ -3242,10 +3242,10 @@ contains
             t % score_bins(j) = N_NC
           case ('(n,gamma)')
             t % score_bins(j) = N_GAMMA
-            t % depletion_rx = .true.
+            t % depletion_rx = .false.
           case ('(n,p)')
             t % score_bins(j) = N_P
-            t % depletion_rx = .true.
+            t % depletion_rx = .false.
           case ('(n,d)')
             t % score_bins(j) = N_D
           case ('(n,t)')
@@ -3254,7 +3254,7 @@ contains
             t % score_bins(j) = N_3HE
           case ('(n,a)')
             t % score_bins(j) = N_A
-            t % depletion_rx = .true.
+            t % depletion_rx = .false.
           case ('(n,2a)')
             t % score_bins(j) = N_2A
           case ('(n,3a)')

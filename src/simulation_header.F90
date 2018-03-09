@@ -25,7 +25,7 @@ module simulation_header
   integer :: total_gen     = 0 ! total number of generations simulated
   logical(C_BOOL), bind(C) :: simulation_initialized = .false.
   logical :: need_depletion_rx ! need to calculate depletion reaction rx?
-
+  
   ! ============================================================================
   ! TALLY PRECISION TRIGGER VARIABLES
 

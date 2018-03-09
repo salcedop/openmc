@@ -180,6 +180,37 @@ contains
     end if
   end subroutine sort_int
 
+
+  pure subroutine sort_int2(array,array1)
+    integer, intent(inout) :: array(:)
+    integer,intent(inout) :: array1(:)
+    integer :: k, m
+    integer :: temp
+    integer :: temp1
+
+    if (size(array) > 1) then
+      SORT: do k = 2, size(array)
+        ! Save value to move
+        m = k
+        temp = array(k)
+        temp1 = array1(k)
+        MOVE_OVER: do while (m > 1)
+          ! Check if insertion value is greater than (m-1)th value
+          if (temp >= array(m - 1)) exit
+
+          ! Move values over until hitting one that's not larger
+          array(m) = array(m - 1)
+          m = m - 1
+        end do MOVE_OVER
+
+        ! Put the original value into its new position
+        array(m) = temp
+        array1(m) = temp1
+      end do SORT
+    end if
+  end subroutine sort_int2
+
+  
   pure subroutine sort_real(array)
     real(8), intent(inout) :: array(:)
 

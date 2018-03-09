@@ -13,7 +13,7 @@ module particle_restart
   use random_lcg,       only: set_particle_seed
   use settings
   use simulation_header
-  use tally_header,     only: n_tallies,TallyBuffer
+  use tally_header,     only: n_tallies
   use tracking,         only: transport
 
   use hdf5, only: HID_T

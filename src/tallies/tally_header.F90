@@ -42,17 +42,21 @@ module tally_header
 !===============================================================================
   
   
-  type,public :: TallyBuffer
+  !type,public :: TallyBuffer1
     ! first index handles discontinueties
-    integer :: idx 
     !1-index,2-int_factor, 3-itemp
-    integer :: xs_index(BUFFER_SIZE,BUFFER_NUCLIDE,2) 
-    ! 1- mat_id, 2-flag
-    real(8) :: interp_f(BUFFER_SIZE,BUFFER_NUCLIDE)
-    integer :: gen_info(Buffer_SIZE,2)=0
-    real(8) :: distance(BUFFER_SIZE)
+  !  integer :: xs_index(BUFFER_SIZE,BUFFER_NUCLIDE) 
+  !end type TallyBuffer1
+
+  !type,public :: TallyBuffer2
+  !  real(8) :: interp_f(BUFFER_SIZE,BUFFER_NUCLIDE)
+  !end type TallyBuffer2
+
+  !type,public :: TallyBuffer3
+
+  !  integer :: xs_index(BUFFER_SIZE,BUFFER_NUCLIDE)
     
-  end type TallyBuffer
+  !end type TallyBuffer
 
   type, public :: TallyObject
     ! Basic data

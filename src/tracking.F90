@@ -39,9 +39,9 @@ contains
     type(Particle), intent(inout) :: p
     integer :: buffer_index(2,BUFFER_NUCLIDE,BUFFER_SIZE)
     real(8) :: buffer_interp(BUFFER_NUCLIDE,BUFFER_SIZE)
-    integer :: buffer_materials(2,BUFFER_SIZE)
+    integer :: buffer_materials(BUFFER_SIZE)
     real(8) :: buffer_distances(BUFFER_SIZE)
-    !integer :: buffer_events(BUFFER_SIZE)
+    
     integer :: buffer_flag(BUFFER_SIZE) 
 
     integer :: idx
@@ -90,7 +90,7 @@ contains
     EVENT_LOOP: do
       ! Store pre-collision particle properties
       idx = idx + 1
-      buffer_materials(2,idx) = idx
+      
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -119,7 +119,7 @@ contains
 
       ! Calculate microscopic and macroscopic cross sections
       
-      buffer_materials(1,idx) = p % material
+      buffer_materials(idx) = p % material
       if (run_CE) then
 
         mat => materials(p % material)
@@ -198,7 +198,7 @@ contains
       if (idx == BUFFER_SIZE) then
         
         call flush_buffer(buffer_index(:,:,1:idx),&
-        buffer_interp(:,1:idx),buffer_materials(:,1:idx),&
+        buffer_interp(:,1:idx),buffer_materials,&
         buffer_distances,buffer_flag,idx)
         idx = 0
 
@@ -330,7 +330,7 @@ contains
         else
 
          call flush_buffer(buffer_index(:,:,1:idx),&
-         buffer_interp(:,1:idx),buffer_materials(:,1:idx),&
+         buffer_interp(:,1:idx),buffer_materials(1:idx),&
          buffer_distances(1:idx),buffer_flag(1:idx),idx)
          idx = 0
           exit EVENT_LOOP
@@ -356,11 +356,11 @@ contains
   integer,intent(in) :: idx
   integer,intent(in) :: buffer_index(2,BUFFER_NUCLIDE,idx)
   real(8),intent(in) :: buffer_interp(BUFFER_NUCLIDE,idx)
-  integer,intent(inout) :: buffer_materials(2,idx)
+  integer,intent(in) :: buffer_materials(idx)
   real(8),intent(in) :: buffer_distances(idx)
   !integer,intent(inout) :: buffer_events(idx)
   integer,intent(in) :: buffer_flag(idx)
-  integer :: ii
+
   integer :: i
   integer :: j
   integer :: k
@@ -369,47 +369,18 @@ contains
   integer :: i_grid
   integer :: f
   integer :: i_temp
-  integer :: irow,krow
-  integer :: buf(2,1)
+
   !type(Nuclide),pointer :: i_nuclide
   !type(Material), pointer :: mat 
   real(8) :: tmp_xs(7,BUFFER_NUCLIDE)
   real(8) :: aux_xs(7,BUFFER_NUCLIDE)
   
-  !real(8),pointer :: P(:,:)
-  !write(*,*) "flush"
-  !allocate(tmp_xs(BUFFER_NUCLIDE,7))
-  !allocate(aux_xs(BUFFER_NUCLIDE,7))
-  !if (.not. allocated(aux_xs)) allocate(aux_xs(BUFFER_NUCLIDE,7))
-  !write(*,*) buffer_materials(1,:)
-  !write(*,*) buffer_materials(2,:)
-  !write(*,*) "----"
- ! write(*,*) buffer_events
- ! write(*,*) "-----" 
-  
-  do irow = 1, idx
-        krow = minloc( buffer_materials(1,irow:idx ), dim=1 ) + irow - 1
-
-        buf(:,1)     = buffer_materials(: ,irow )
-        buffer_materials(:,irow ) = buffer_materials( :,krow )
-        buffer_materials( :,krow ) = buf( :,1 )
-  end do
-    
-  !call sort_int2(buffer_materials,buffer_events)  
-  
-  !write(*,*) buffer_materials(1,:)
-  !write(*,*) buffer_materials(2,:)
- ! write(*,*) "----"
-  !write(*,*) buffer_events
-  !write(*,*) "-----"
-
   do i=1,idx
-      ii = buffer_materials(2,i)
       !write(*,*) i
       !write(*,*) "----"
       !write(*,*) buffer % gen_info(i,1)
     
-      associate(mat => materials(buffer_materials(1,i)))
+      associate(mat => materials(buffer_materials(i)))
       !associate(mat => materials(buffer % gen_info(i,1)))
       tmp_xs(:,:) = ZERO
       do k=1,mat % n_nuclides
@@ -417,7 +388,7 @@ contains
          !buffer % gen_info(i,2)
          
          associate(i_nuclide => nuclides(event_nuc))
-         if (buffer_flag(ii)==1) then
+         if (buffer_flag(i)==1) then
             !if(i == 1) then
             !   tmp_xs(i,:,:) = aux_xs(:,:)
             !else
@@ -430,9 +401,9 @@ contains
             do j=1,6
 
                i_rxn = i_nuclide % reaction_index(DEPLETION_RX(j))
-               i_grid = buffer_index(1,event_nuc,ii)
-               f = buffer_interp(event_nuc,ii)
-               i_temp = buffer_index(2,event_nuc,ii)
+               i_grid = buffer_index(1,event_nuc,i)
+               f = buffer_interp(event_nuc,i)
+               i_temp = buffer_index(2,event_nuc,i)
               if (i_rxn > 0)  then
               associate (xs => i_nuclide % reactions(i_rxn) % xs(i_temp))
                 if (i_grid >= xs % threshold) then
@@ -462,7 +433,7 @@ contains
           end associate
       end do
       associate(P=>tmp_xs)
-      call score_tracklength_tally(buffer_materials(1,i), buffer_distances(ii),P)
+      call score_tracklength_tally(buffer_materials(i), buffer_distances(i),P)
        !aux_xs(:,:) = tmp_xs(:,:)
       end associate
       end associate

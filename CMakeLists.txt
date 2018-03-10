@@ -116,7 +116,7 @@ if(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
   endif()
 
   # GCC compiler options
-  list(APPEND f90flags -cpp -std=f2008ts -fbacktrace -O2 -fstack-arrays -g)
+  list(APPEND f90flags -cpp -std=f2008ts -fbacktrace -O2 -g)
   if(debug)
     list(REMOVE_ITEM f90flags -O2)
     list(APPEND f90flags -g -enable-checking -fbacktrace -Wall -Wno-unused-dummy-argument -pedantic

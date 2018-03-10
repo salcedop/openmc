@@ -223,7 +223,7 @@ contains
     character(MAX_WORD_LEN) :: filetype
     integer(HID_T) :: file_id
     character(MAX_WORD_LEN), allocatable :: argv(:) ! command line arguments
-
+    
     ! Check number of command line arguments and allocate argv
     argc = COMMAND_ARGUMENT_COUNT()
 
@@ -243,6 +243,12 @@ contains
         case ('-p', '-plot', '--plot')
           run_mode = MODE_PLOTTING
           check_overlaps = .true.
+
+        
+        case('-b','--buffer')
+          ! Read buffer size
+          i = i + 1
+          BUFFER_SIZE = str_to_int(argv(i))
 
         case ('-n', '-particles', '--particles')
           ! Read number of particles per cycle

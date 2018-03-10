@@ -42,16 +42,6 @@ module tally_header
 !===============================================================================
   
   
-  type,public :: TallyBuffer
-
-    integer :: idx
-    integer :: material(BUFFER_SIZE)
-
-    real(8) :: distance(BUFFER_SIZE)
-    real(8) :: tmp_xs(BUFFER_SIZE,BUFFER_NUCLIDE,BUFFER_REACTIONS)
-
-  end type TallyBuffer
-
   type, public :: TallyObject
     ! Basic data
 

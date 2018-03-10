@@ -37,8 +37,12 @@ contains
   subroutine transport(p)
 
     type(Particle), intent(inout) :: p
-    type(TallyBuffer) :: buffer
     
+    real(8) :: tmp_xs(7,BUFFER_NUCLIDE,BUFFER_SIZE)
+    real(8) :: buffer_distances(BUFFER_SIZE)
+    integer :: buffer_materials(BUFFER_SIZE)    
+        
+
 
     integer :: idx
     integer :: i_nuclide
@@ -56,7 +60,7 @@ contains
     logical :: found_cell             ! found cell which particle is in?
     type(Material), pointer :: mat
     
-    buffer % idx = 1
+    idx = 0
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
       call write_message("Simulating Particle " // trim(to_str(p % id)))
@@ -84,8 +88,8 @@ contains
 
     EVENT_LOOP: do
       ! Store pre-collision particle properties
-      idx = buffer % idx
-      buffer % idx = idx + 1
+      idx = idx + 1
+      
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -112,7 +116,7 @@ contains
       ! check to see if buffer can be flushed
       ! Score track-length tallies
 
-      buffer % material(idx) = p % material
+      buffer_materials(idx) = p % material
       ! Calculate microscopic and macroscopic cross sections
       if (run_CE) then
 
@@ -129,9 +133,10 @@ contains
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) =  micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission           
+                        tmp_xs(i_reaction,index_nuclide,idx) =  micro_xs(index_nuclide) % reaction(i_reaction)
                 end do
+
+                 tmp_xs(7,index_nuclide,idx) = micro_xs(index_nuclide) % fission           
             end do
 
         else
@@ -146,9 +151,10 @@ contains
                         !by computing tmp_xs at this stage, I think we don't
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = micro_xs(index_nuclide) % reaction(i_reaction)
-                buffer % tmp_xs(idx,index_nuclide,7) = micro_xs(index_nuclide) % fission
+                        tmp_xs(i_reaction,index_nuclide,idx) = micro_xs(index_nuclide) % reaction(i_reaction)
                 end do
+
+                tmp_xs(7,index_nuclide,idx) = micro_xs(index_nuclide) % fission
             end do
             end if
             if (idx > 1) then
@@ -159,9 +165,10 @@ contains
                         !have to worry about 
                         !saving the interpolation_factor, index_grid, etc.
                         !write(*,*) idx
-                        buffer % tmp_xs(idx,index_nuclide,i_reaction) = buffer % tmp_xs(idx-1,index_nuclide,i_reaction) 
-                buffer % tmp_xs(idx,index_nuclide,7) = buffer % tmp_xs(idx-1,index_nuclide,7) 
+                        tmp_xs(i_reaction,index_nuclide,idx) = tmp_xs(i_reaction,index_nuclide,idx-1) 
                 end do
+                
+                tmp_xs(7,index_nuclide,idx) = tmp_xs(7,index_nuclide,idx-1) 
             end do
             end if
 
@@ -199,12 +206,12 @@ contains
 
       ! Select smaller of the two distances
       distance = min(d_boundary, d_collision)
-      buffer % distance(idx) = distance
+      buffer_distances(idx) = distance
 
       
-      if (buffer % idx > BUFFER_SIZE) then
-        call flush_buffer(buffer) 
-        buffer % idx = 1
+      if (idx == BUFFER_SIZE) then
+        call flush_buffer(tmp_xs,buffer_materials,buffer_distances,idx) 
+        idx = 0
       end if
       ! Advance particle
       do j = 1, p % n_coord
@@ -331,8 +338,9 @@ contains
           ! Enter new particle in particle track file
           if (p % write_track) call add_particle_track()
         else
-          call flush_buffer(buffer)
-          buffer % idx = 1
+          call flush_buffer(tmp_xs(:,:,1:idx),buffer_materials(1:idx),buffer_distances(1:idx),idx)
+          idx = 0
+
           exit EVENT_LOOP
         end if
       end if
@@ -351,29 +359,19 @@ contains
 ! Flushing buffer by calling score_tracklength
 !===============================================================================
 
-  subroutine flush_buffer(buffer)
-
-  type(TallyBuffer), intent(in) :: buffer
-  integer :: i
-  real(8), pointer :: P(:,:) !to pass cross-sections of given mat at energy E.
-  real(8),target :: xs_to_pass(BUFFER_NUCLIDE,BUFFER_REACTIONS)
-  
-  do i=1,BUFFER_SIZE
-    xs_to_pass = buffer % tmp_xs(i,:,:)
-    P => xs_to_pass
+  subroutine flush_buffer(tmp_xs,buffer_materials,buffer_distances,idx)
+  integer, intent(in) :: idx
+  real(8), intent(in) :: tmp_xs(7,BUFFER_NUCLIDE,idx)
+  integer, intent(in) :: buffer_materials(idx)
+  real(8), intent(in) :: buffer_distances(idx)
+  integer :: i 
+  do i=1,idx
+    associate(P => tmp_xs(:,:,i))
     
-    !need to pass material ID, distance, and cross-section
-    call score_tracklength_tally(buffer % material (i), buffer % distance(i),P)
-    !normal loop over tallies, filters, nuclides, scores
-    !except now just pull material from buffer and cross-section
-    !from tmp_xs
-    
+    call score_tracklength_tally(buffer_materials (i), buffer_distances(i),P)
+    end associate 
   end do
   
-    !buffer % tmp_xs(:,:,:) = 0.0
-    !buffer % idx = 1
-    !deallocate(buffer)
-    !deallocate(micro_xs)
      
   end subroutine flush_buffer
 

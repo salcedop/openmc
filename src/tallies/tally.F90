@@ -360,7 +360,7 @@ contains
         else
           if (i_nuclide > 0) then
             !score = micro_xs(i_nuclide) % fission * atom_density * flux
-             score = tmp_xs(i_nuclide,BUFFER_REACTIONS) * atom_density * flux
+             score = tmp_xs(7,i_nuclide) * atom_density * flux
           else
             score = material_xs % fission * flux
           end if
@@ -1159,7 +1159,7 @@ contains
           end select
 
           if (i_nuclide > 0) then
-            score = tmp_xs(i_nuclide,m) * atom_density * flux
+            score = tmp_xs(m,i_nuclide) * atom_density * flux
              
             !score = tmp_xs* atom_density * flux
           else
@@ -1167,11 +1167,9 @@ contains
             if (p % material /= MATERIAL_VOID) then
               associate (mat => materials(p % material))
                 do l = 1, materials(p % material) % n_nuclides
-                  !write(*,*) tmp_xs(i_nuclide,m)
-                  !write(*,*) "-----"
                   i_nuc = mat % nuclide(l)
                   atom_density_ = mat % atom_density(l)
-                  score = score + tmp_xs(i_nuc,m) * atom_density_ * flux
+                  score = score + tmp_xs(m,i_nuc) * atom_density_ * flux
                 end do
               end associate
             end if
@@ -2927,7 +2925,7 @@ contains
     real(8) :: filter_weight        ! combined weight of all filters
     logical :: finished             ! found all valid bin combinations
     type(Material),    pointer :: mat
-    real(8) :: tmp_xs(BUFFER_NUCLIDE,BUFFER_REACTIONS)
+    real(8) :: tmp_xs(7,BUFFER_NUCLIDE)
     ! Determine collision estimate of flux
     if (survival_biasing) then
       ! We need to account for the fact that some weight was already absorbed

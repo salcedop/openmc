@@ -40,7 +40,7 @@ contains
     
     real(8) :: tmp_xs(7,BUFFER_NUCLIDE,BUFFER_SIZE)
     real(8) :: buffer_distances(BUFFER_SIZE)
-    integer :: buffer_materials(BUFFER_SIZE)    
+    integer :: buffer_materials(2,BUFFER_SIZE)    
         
 
 
@@ -89,7 +89,7 @@ contains
     EVENT_LOOP: do
       ! Store pre-collision particle properties
       idx = idx + 1
-      
+      buffer_materials(2,idx) = idx
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -116,7 +116,7 @@ contains
       ! check to see if buffer can be flushed
       ! Score track-length tallies
 
-      buffer_materials(idx) = p % material
+      buffer_materials(1,idx) = p % material
       ! Calculate microscopic and macroscopic cross sections
       if (run_CE) then
 
@@ -338,7 +338,7 @@ contains
           ! Enter new particle in particle track file
           if (p % write_track) call add_particle_track()
         else
-          call flush_buffer(tmp_xs(:,:,1:idx),buffer_materials(1:idx),buffer_distances(1:idx),idx)
+          call flush_buffer(tmp_xs(:,:,1:idx),buffer_materials(:,1:idx),buffer_distances(1:idx),idx)
           idx = 0
 
           exit EVENT_LOOP
@@ -360,18 +360,34 @@ contains
 !===============================================================================
 
   subroutine flush_buffer(tmp_xs,buffer_materials,buffer_distances,idx)
+
   integer, intent(in) :: idx
   real(8), intent(in) :: tmp_xs(7,BUFFER_NUCLIDE,idx)
-  integer, intent(in) :: buffer_materials(idx)
+  integer, intent(inout) :: buffer_materials(2,idx)
   real(8), intent(in) :: buffer_distances(idx)
   integer :: i 
+
+  integer :: i_temp
+  integer :: ievent
+  integer :: irow,krow
+  integer :: buf(2,1)
+
+  do irow = 1, idx
+        krow = minloc( buffer_materials(1,irow:idx ), dim=1 ) + irow - 1
+        buf(:,1)     = buffer_materials(: ,irow )
+        buffer_materials(:,irow ) = buffer_materials( :,krow )
+        buffer_materials( :,krow ) = buf( :,1 )
+  end do
+
+
   do i=1,idx
-    associate(P => tmp_xs(:,:,i))
+    ievent = buffer_materials(2,i)
+    associate(P => tmp_xs(:,:,ievent))
     
-    call score_tracklength_tally(buffer_materials (i), buffer_distances(i),P)
+    call score_tracklength_tally(buffer_materials (1,i), buffer_distances(ievent),P)
     end associate 
   end do
-  
+  buffer_materials(:,:) = 0
      
   end subroutine flush_buffer
 

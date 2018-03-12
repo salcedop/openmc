@@ -369,6 +369,7 @@ contains
   integer :: i_grid
   integer :: f
   integer :: i_temp
+  integer :: th
   integer :: irow,krow
   integer :: buf(2,1)
   !type(Nuclide),pointer :: i_nuclide
@@ -434,7 +435,7 @@ contains
                f = buffer_interp(event_nuc,ii)
                i_temp = buffer_index(2,event_nuc,ii)
               if (i_rxn > 0)  then
-              associate (xs => i_nuclide % reactions(i_rxn) % xs(i_temp))
+              associate (xs => i_nuclide % depl_rxn(j) % xs(i_temp))
                 if (i_grid >= xs % threshold) then
                   tmp_xs(j,event_nuc) = (ONE - f) * &
                       xs % value(i_grid - xs % threshold + 1) + &

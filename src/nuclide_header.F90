@@ -88,6 +88,7 @@ module nuclide_header
     ! Reactions
 
     type(Reaction), allocatable :: reactions(:)
+    type(Reaction), allocatable :: depl_rxn(:)
 
     !real(8) :: reaction(size(DEPLETION_RX))
     ! Array that maps MT values to index in reactions; used at tally-time. Note
@@ -260,7 +261,8 @@ contains
     real(8),          intent(in)    :: tolerance
     real(8),          intent(in)    :: minmax(2)  ! range of temperatures
     logical,          intent(in)    :: master     ! if this is the master proc
-
+    
+    integer :: mm
     integer :: i
     integer :: i_closest
     integer :: n_temperature
@@ -429,15 +431,37 @@ contains
         call MTs % push_back(int(str_to_int(grp_names(j)(10:12))))
       end if
     end do
-
+    
     ! Read reactions
+    
+    allocate(this % depl_rxn(6))
     allocate(this % reactions(MTs % size()))
     do i = 1, size(this % reactions)
       rx_group = open_group(rxs_group, 'reaction_' // trim(&
            zero_padded(MTs % data(i), 3)))
 
-      call this % reactions(i) % from_hdf5(rx_group, temps_to_read)
+       call this % reactions(i) % from_hdf5(rx_group, temps_to_read)
+ 
+      select case( this % reactions(i) % MT)
+         case(N_2N)
+          mm=1
+         case(N_3N)
+          mm=2
+         case(N_4N)
+          mm=3
+         case(N_GAMMA)
+          mm=4
+         case(N_P)
+          mm=5
+         case(N_A)
+          mm=6
+         case default
+          mm=0
+       end select
 
+       if (mm > 0) then 
+          call this % depl_rxn(mm) % from_hdf5(rx_group,temps_to_read)
+       end if 
       ! Check for 0K elastic scattering
       if (this % reactions(i) % MT == 2) then
         if (object_exists(rx_group, '0K')) then
@@ -570,6 +594,7 @@ contains
     n_temperature = size(this % kTs)
     allocate(this % sum_xs(n_temperature))
     this % reaction_index(:) = 0
+    
     do i = 1, n_temperature
       ! Allocate and initialize derived cross sections
       n_grid = size(this % grid(i) % energy)
@@ -590,6 +615,8 @@ contains
     do i = 1, size(this % reactions)
       call MTs % push_back(this % reactions(i) % MT)
       this % reaction_index(this % reactions(i) % MT) = i
+            
+
 
       associate (rx => this % reactions(i))
         ! Skip total inelastic level scattering, gas production cross sections

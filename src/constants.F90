@@ -43,7 +43,7 @@ module constants
   real(8), parameter :: TINY_BIT = 1e-8_8
 
   !integer, parameter :: BUFFER_SIZE = 15
-  integer, parameter :: BUFFER_NUCLIDE = 300
+  !integer, parameter :: BUFFER_NUCLIDE = 300
   !integer, parameter :: BUFFER_REACTIONS = 7
 
   ! User for precision in geometry

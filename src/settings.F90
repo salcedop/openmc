@@ -52,6 +52,7 @@ module settings
   integer(C_INT32_T), bind(C) :: n_inactive        ! # of inactive batches
   integer(C_INT32_T), bind(C) :: gen_per_batch = 1 ! # of generations per batch
   integer :: BUFFER_SIZE
+  integer :: BUFFER_NUCLIDE
   integer :: n_max_batches             ! max # of batches
   integer :: n_batch_interval = 1      ! batch interval for triggers
   logical :: pred_batches = .false.    ! predict batches for triggers

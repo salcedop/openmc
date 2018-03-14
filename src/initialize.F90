@@ -250,6 +250,12 @@ contains
           i = i + 1
           BUFFER_SIZE = str_to_int(argv(i))
 
+         case('--nuclide')
+          ! Read buffer size
+          i = i + 1
+          BUFFER_NUCLIDE = str_to_int(argv(i))
+
+
         case ('-n', '-particles', '--particles')
           ! Read number of particles per cycle
           i = i + 1

@@ -245,15 +245,15 @@ contains
           check_overlaps = .true.
 
         
-        !case('-b','--buffer')
+        case('-b','--buffer')
           ! Read buffer size
-        !  i = i + 1
-        !  BUFFER_SIZE = str_to_int(argv(i))
+          i = i + 1
+          BUFFER_SIZE = str_to_int(argv(i))
 
-        ! case('--nuclide')
+         case('--nuclide')
           ! Read buffer size
-       !   i = i + 1
-       !   BUFFER_NUCLIDE = str_to_int(argv(i))
+          i = i + 1
+          BUFFER_NUCLIDE = str_to_int(argv(i))
 
 
         case ('-n', '-particles', '--particles')

@@ -37,11 +37,10 @@ contains
   subroutine transport(p)
 
     type(Particle), intent(inout) :: p
-    integer :: buffer_index(2,BUFFER_NUCLIDE,BUFFER_SIZE)
-    real(8) :: buffer_interp(BUFFER_NUCLIDE,BUFFER_SIZE)
     integer :: buffer_materials(BUFFER_SIZE)
     real(8) :: buffer_distances(BUFFER_SIZE)
-    
+    real(8) :: buffer_E(BUFFER_SIZE)
+    real(8) :: buffer_sqrt(BUFFER_SIZE) 
     integer :: buffer_flag(BUFFER_SIZE) 
 
     integer :: idx
@@ -90,7 +89,7 @@ contains
     EVENT_LOOP: do
       ! Store pre-collision particle properties
       idx = idx + 1
-      
+      buffer_E(idx) = p % E
       p % last_wgt = p % wgt
       p % last_E   = p % E
       p % last_uvw = p % coord(1) % uvw
@@ -120,6 +119,7 @@ contains
       ! Calculate microscopic and macroscopic cross sections
       
       buffer_materials(idx) = p % material
+      buffer_sqrt(idx) = p % sqrtkT
       if (run_CE) then
 
         mat => materials(p % material)
@@ -130,34 +130,9 @@ contains
              buffer_flag(idx) = 0
             call calculate_xs(p)
             
-            do nuc = 1,mat % n_nuclides
-               nuc_id = mat % nuclide(nuc)
-               buffer_index(1,nuc_id,idx) = micro_xs(nuc_id)%index_grid
-               buffer_index(2,nuc_id,idx) = micro_xs(nuc_id)%index_temp
-               buffer_interp(nuc_id,idx) = micro_xs(nuc_id)%interp_factor
-            end do         
         else
-            
+            buffer_flag(idx) = 1 
             !filled new elements with previous elements.
-            if (idx == 1) then
-                
-            call calculate_xs(p)
-            do nuc = 1,mat % n_nuclides
-               nuc_id = mat % nuclide(nuc)
-               buffer_index(1,nuc_id,idx) = micro_xs(nuc_id)%index_grid
-               buffer_index(2,nuc_id,idx) = micro_xs(nuc_id)%index_temp
-               buffer_interp(nuc_id,idx) = micro_xs(nuc_id)%interp_factor
-               
-            end do 
-            buffer_flag(idx) = 0
-            
-            else 
-
-                 !buffer % xs_info(idx,:,:) = buffer % xs_info(idx-1,:,:)
-                 buffer_flag(idx) = 1
-
-            end if
-
         end if
       else
         ! Since the MGXS can be angle dependent, this needs to be done
@@ -197,9 +172,9 @@ contains
       
       if (idx == BUFFER_SIZE) then
         
-        call flush_buffer(buffer_index(:,:,1:idx),&
-        buffer_interp(:,1:idx),buffer_materials,&
-        buffer_distances,buffer_flag,idx)
+        call flush_buffer(buffer_materials,&
+        buffer_distances,buffer_flag,&
+        buffer_E,buffer_sqrt,idx)
         idx = 0
 
       end if
@@ -328,12 +303,16 @@ contains
           ! Enter new particle in particle track file
           if (p % write_track) call add_particle_track()
         else
-
-         call flush_buffer(buffer_index(:,:,1:idx),&
-         buffer_interp(:,1:idx),buffer_materials(1:idx),&
-         buffer_distances(1:idx),buffer_flag(1:idx),idx)
+         if (idx /= 0) then
+         call flush_buffer(buffer_materials(1:idx),&
+         buffer_distances(1:idx),buffer_flag(1:idx),&
+         buffer_E(1:idx),buffer_sqrt(1:idx),idx)
          idx = 0
-          exit EVENT_LOOP
+         else
+         idx = idx
+         end if
+         
+        exit EVENT_LOOP
         end if
       end if
     end do EVENT_LOOP
@@ -351,16 +330,15 @@ contains
 ! Flushing buffer by calling score_tracklength
 !===============================================================================
 
-  subroutine flush_buffer(buffer_index,buffer_interp,buffer_materials,&
-  buffer_distances,buffer_flag,idx)
+  subroutine flush_buffer(buffer_materials,buffer_distances,buffer_flag,&
+  buffer_E,buffer_sqrt,idx)
   integer,intent(in) :: idx
-  integer,intent(in) :: buffer_index(2,BUFFER_NUCLIDE,idx)
-  real(8),intent(in) :: buffer_interp(BUFFER_NUCLIDE,idx)
   integer,intent(in) :: buffer_materials(idx)
   real(8),intent(in) :: buffer_distances(idx)
-  !integer,intent(inout) :: buffer_events(idx)
+  real(8),intent(in) :: buffer_E(idx)
+  real(8),intent(in) :: buffer_sqrt(idx)
   integer,intent(in) :: buffer_flag(idx)
-
+  integer :: i_log_union 
   integer :: i
   integer :: j
   integer :: k
@@ -369,43 +347,83 @@ contains
   integer :: i_grid
   integer :: f
   integer :: i_temp
+  real(8) :: kT
+  integer :: i_low
+  integer :: i_high
 
-  !type(Nuclide),pointer :: i_nuclide
-  !type(Material), pointer :: mat 
   real(8) :: tmp_xs(7,BUFFER_NUCLIDE)
   real(8) :: aux_xs(7,BUFFER_NUCLIDE)
   
+
+  aux_xs(:,:) = ZERO
   do i=1,idx
-      !write(*,*) i
-      !write(*,*) "----"
-      !write(*,*) buffer % gen_info(i,1)
-    
-      associate(mat => materials(buffer_materials(i)))
-      !associate(mat => materials(buffer % gen_info(i,1)))
-      tmp_xs(:,:) = ZERO
-      do k=1,mat % n_nuclides
-         event_nuc = mat % nuclide(k)
-         !buffer % gen_info(i,2)
-         
-         associate(i_nuclide => nuclides(event_nuc))
-         if (buffer_flag(i)==1) then
-            !if(i == 1) then
-            !   tmp_xs(i,:,:) = aux_xs(:,:)
-            !else
+
+    associate(mat => materials(buffer_materials(i)))
+    tmp_xs(:,:) = ZERO
+    if (buffer_flag(i)==1) then
             do j=1,6
                tmp_xs(j,event_nuc) = aux_xs(j,event_nuc)
-            end do!tmp_xs(event_nuc,:)
-            tmp_xs(7,event_nuc) = aux_xs(7,event_nuc)
-         else
-            
-            do j=1,6
+            end do
+    tmp_xs(7,event_nuc) = aux_xs(7,event_nuc)
 
-               i_rxn = i_nuclide % reaction_index(DEPLETION_RX(j))
-               i_grid = buffer_index(1,event_nuc,i)
-               f = buffer_interp(event_nuc,i)
-               i_temp = buffer_index(2,event_nuc,i)
+    else
+
+     kT = buffer_sqrt(i)**2
+     i_log_union = int(log(buffer_E(i)/energy_min_neutron)/log_spacing)
+      do k=1,mat % n_nuclides
+         event_nuc = mat % nuclide(k) 
+         associate(nuc => nuclides(event_nuc))
+       select case (temperature_method)
+       case (TEMPERATURE_NEAREST)
+          i_temp = minloc(abs(nuc % kTs - kT), dim=1)
+
+       case (TEMPERATURE_INTERPOLATION)
+          ! Find temperatures that bound the actual temperature
+          do i_temp = 1, size(nuc % kTs) - 1
+            if (nuc % kTs(i_temp) <= kT .and. kT < nuc % kTs(i_temp + 1)) exit
+          end do
+
+          ! Randomly sample between temperature i and i+1
+          f = (kT - nuc % kTs(i_temp)) / &
+               (nuc % kTs(i_temp + 1) - nuc % kTs(i_temp))
+          if (f > prn()) i_temp = i_temp + 1
+        end select
+
+        associate (grid => nuc % grid(i_temp))
+          ! Determine the energy grid index using a logarithmic mapping to
+          ! reduce the energy range over which a binary search needs to be
+          ! performed
+
+          if (buffer_E(i) < grid % energy(1)) then
+            i_grid = 1
+          elseif (buffer_E(i) > grid % energy(size(grid % energy))) then
+            i_grid = size(grid % energy) - 1
+          else
+            ! Determine bounding indices based on which equal log-spaced
+            ! interval the energy is in
+            i_low  = grid % grid_index(i_log_union)
+            i_high = grid % grid_index(i_log_union + 1) + 1
+
+            ! Perform binary search over reduced range
+            i_grid = binary_search(grid % energy(i_low:i_high), &
+                 i_high - i_low + 1, buffer_E(i)) + i_low - 1
+          end if
+
+          ! check for rare case where two energy points are the same
+          if (grid % energy(i_grid) == grid % energy(i_grid + 1)) then 
+               i_grid = i_grid + 1
+          end if
+          ! calculate interpolation factor
+          f = (buffer_E(i) - grid % energy(i_grid)) / &
+               (grid % energy(i_grid + 1) - grid % energy(i_grid))
+        end associate
+
+           
+           do j=1,6
+
+               i_rxn = nuc % reaction_index(DEPLETION_RX(j))
               if (i_rxn > 0)  then
-              associate (xs => i_nuclide % reactions(i_rxn) % xs(i_temp))
+              associate (xs => nuc % reactions(i_rxn) % xs(i_temp))
                 if (i_grid >= xs % threshold) then
                   tmp_xs(j,event_nuc) = (ONE - f) * &
                       xs % value(i_grid - xs % threshold + 1) + &
@@ -416,8 +434,8 @@ contains
                end if
             end do
                 
-            associate(xs => i_nuclide % sum_xs(i_temp))
-            if (i_nuclide % fissionable) then
+            associate(xs => nuc % sum_xs(i_temp))
+            if (nuc % fissionable) then
             tmp_xs(7,event_nuc) = (ONE - f) * xs % fission(i_grid) &
                  + f * xs % fission(i_grid + 1)
             else
@@ -425,34 +443,15 @@ contains
             end if
             aux_xs(7,event_nuc) = tmp_xs(7,event_nuc)
             end associate
-          
-            !tmp_xs(event_nuc,:) = depletion_xs_const(i_nuclide,&
-            !buffer%xs_info(i,event_nuc,1),buffer%xs_info(i,event_nuc,2),&
-            !buffer%xs_info(i,event_nuc,3))
-         end if
-          end associate
-      end do
+         end associate 
+         end do
+      end if
       associate(P=>tmp_xs)
       call score_tracklength_tally(buffer_materials(i), buffer_distances(i),P)
-       !aux_xs(:,:) = tmp_xs(:,:)
       end associate
       end associate
   end do
-      
-  !flushing
-    
-  !do i=1,BUFFER_SIZE
-    
-  !  P => tmp_xs(i,:,:)  
-    !need to pass material ID, distance, and cross-sections
-  !  call score_tracklength_tally(buffer % gen_info (i,1), buffer % &
-  !  distance(i),P)
-  !end do
-  
-    !deallocate(tmp_xs)
-    !deallocate(aux_xs)
-    
-      
+ 
   end subroutine flush_buffer
 
 !===============================================================================

@@ -328,11 +328,14 @@ contains
           ! Enter new particle in particle track file
           if (p % write_track) call add_particle_track()
         else
-
+         if idx \= 0 then
          call flush_buffer(buffer_index(:,:,1:idx),&
          buffer_interp(:,1:idx),buffer_materials(1:idx),&
          buffer_distances(1:idx),buffer_flag(1:idx),idx)
          idx = 0
+         else
+           idx=idx
+         end if
           exit EVENT_LOOP
         end if
       end if

@@ -116,7 +116,7 @@ if(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
   endif()
 
   # GCC compiler options
-  list(APPEND f90flags -cpp -std=f2008ts -fbacktrace -g)
+  list(APPEND f90flags -cpp -std=f2008ts -fbacktrace -O0 -g)
   if(debug)
     list(REMOVE_ITEM f90flags -O2)
     list(APPEND f90flags -g -enable-checking -fbacktrace -Wall -Wno-unused-dummy-argument -pedantic
@@ -210,7 +210,7 @@ endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL GNU)
   # GCC compiler options
- list(APPEND cflags -std=c99)
+ list(APPEND cflags -std=c99 -O0)
   if(debug)
     list(REMOVE_ITEM cflags -O2)
     list(APPEND cflags -g -Wall -pedantic -fbounds-check)
@@ -250,7 +250,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES Clang)
   endif()
 
 endif()
-list(APPEND cxxflags -std=c++11 )
+list(APPEND cxxflags -std=c++11 -O0)
 if(debug)
   list(REMOVE_ITEM cxxflags -O2)
   list(APPEND cxxflags -g -O0)

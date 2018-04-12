@@ -857,7 +857,7 @@ contains
     real(8) :: f      ! interp factor on nuclide energy grid
     real(8) :: kT     ! temperature in eV
     real(8) :: sig_t, sig_a, sig_f ! Intermediate multipole variables
-
+  
     ! Initialize cached cross sections to zero
     micro_xs % elastic         = CACHE_INVALID
     micro_xs % thermal         = ZERO
@@ -986,7 +986,12 @@ contains
       if (need_depletion_rx) then
         do j = 1, 6
           ! Initialize reaction xs to zero
-          micro_xs % reaction(j) = ZERO
+          if (j < 4) then  
+              micro_xs % reaction(j) = ZERO
+          else
+              micro_xs % reaction(j:6) = ZERO
+          end if
+                 
 
           ! If reaction is present and energy is greater than threshold, set
           ! the reaction xs appropriately
@@ -997,6 +1002,12 @@ contains
                 micro_xs % reaction(j) = (ONE - f) * &
                      xs % value(i_grid - xs % threshold + 1) + &
                      f * xs % value(i_grid - xs % threshold + 2)
+          ! Check if we are below the (n,2n) and (n,3n) reaction thresholds to skip
+          ! remaining depletion-xs construction.
+              else
+                 if (j == 4 .or. j == 5) then
+                       exit
+                 end if
               end if
             end associate
           end if

@@ -981,16 +981,16 @@ contains
           micro_xs % nu_fission      = ZERO
         end if
       end associate
-
       ! Depletion-related reactions
       if (need_depletion_rx) then
-        do j = 1, 6
+        micro_xs % reaction(:) = ZERO
+        do j = 2, 6
           ! Initialize reaction xs to zero
-          if (j < 4) then  
-              micro_xs % reaction(j) = ZERO
-          else
-              micro_xs % reaction(j:6) = ZERO
-          end if
+          !if (j < 4) then  
+          !    micro_xs % reaction(j) = ZERO
+          !else
+          !    micro_xs % reaction(j:6) = ZERO
+          !end if
                  
 
           ! If reaction is present and energy is greater than threshold, set
@@ -1005,16 +1005,27 @@ contains
           ! Check if we are below the (n,2n) and (n,3n) reaction thresholds to skip
           ! remaining depletion-xs construction.
               else
-                 if (j == 4 .or. j == 5) then
+                 if (j >= 4) then
                        exit
                  end if
               end if
             end associate
           end if
         end do
+        !doing (n,gamma) separately to check performance.
+        !there shouldn't be a threshold check for this one.
+        !I know is not clean but I don't want to overload the loop
+        !with too many conditional statements for now.
+        i_rxn = this % reaction_index(DEPLETION_RX(1))
+        if (i_rxn > 0) then
+           associate (xs => this % reactions(i_rxn) % xs(i_temp))
+           micro_xs % reaction(1) = (ONE - f) * &
+           xs % value(i_grid - xs % threshold + 1) + &
+           f * xs % value(i_grid - xs % threshold + 2)
+           end associate
+        end if
+        end if
       end if
-
-    end if
 
     ! Initialize sab treatment to false
     micro_xs % index_sab = NONE

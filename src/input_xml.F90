@@ -2427,7 +2427,6 @@ contains
             t % score_bins(j) = N_NC
           case ('(n,gamma)')
             t % score_bins(j) = N_GAMMA
-            t % depletion_rx = .true.
           case ('(n,p)')
             t % score_bins(j) = N_P
             t % depletion_rx = .true.

@@ -279,7 +279,7 @@ contains
     material_xs % absorption     = ZERO
     material_xs % fission        = ZERO
     material_xs % nu_fission     = ZERO
-
+    material_xs % ngamma         = ZERO
     ! Find energy index on energy grid
     i_grid = int(log(E/energy_min_neutron)/log_spacing)
 
@@ -348,6 +348,9 @@ contains
       material_xs % absorption = material_xs % absorption + &
            atom_density * micro_xs(i_nuclide) % absorption
 
+      ! Add contributions to material macroscopic gamma cross section
+      material_xs % ngamma = material_xs % ngamma + &
+           atom_density * micro_xs(i_nuclide) % ngamma
       ! Add contributions to material macroscopic fission cross section
       material_xs % fission = material_xs % fission + &
            atom_density * micro_xs(i_nuclide) % fission

@@ -248,7 +248,13 @@ contains
           end if
         end if
 
-
+      case (N_GAMMA)
+        if (i_nuclide > 0) then
+          score = micro_xs(i_nuclide) % ngamma * atom_density * flux
+        else
+          score = material_xs % ngamma * flux
+        end if
+      
       case (SCORE_FISSION)
         if (t % estimator == ESTIMATOR_ANALOG) then
           if (survival_biasing) then
@@ -1065,7 +1071,7 @@ contains
           end if
         end if
 
-      case (N_2N, N_3N, N_4N, N_GAMMA, N_P, N_A)
+      case (N_2N, N_3N, N_4N, N_P, N_A)
         if (t % estimator == ESTIMATOR_ANALOG) then
           ! Check if event MT matches
           if (p % event_MT /= score_bin) cycle SCORE_LOOP
@@ -1074,18 +1080,17 @@ contains
         else
           ! Determine index in NuclideMicroXS % reaction array
           select case (score_bin)
-          case (N_GAMMA)
-            m = 1
+          
           case (N_P)
-            m = 2
+            m = 1
           case (N_A)
-            m = 3
+            m = 2
           case (N_2N)
-            m = 4
+            m = 3
           case (N_3N)
-            m = 5
+            m = 4
           case (N_4N)
-            m = 6
+            m = 5
           end select
 
           if (i_nuclide > 0) then

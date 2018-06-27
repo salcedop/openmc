@@ -45,7 +45,8 @@ module nuclide_header
        XS_TOTAL      = 1, &
        XS_ABSORPTION = 2, &
        XS_FISSION    = 3, &
-       XS_NU_FISSION = 4
+       XS_NU_FISSION = 4, &
+       XS_GAMMA     = 5
 
   ! The array within SumXS is of shape (4, n_energy) where the first dimension
   ! corresponds to the following values: 1) total, 2) absorption (MT > 100), 3)
@@ -133,7 +134,7 @@ module nuclide_header
     real(8) :: absorption       ! absorption (disappearance)
     real(8) :: fission          ! fission
     real(8) :: nu_fission       ! neutron production from fission
-
+    real(8) :: ngamma
     real(8) :: elastic          ! If sab_frac is not 1 or 0, then this value is
                                 !   averaged over bound and non-bound nuclei
     real(8) :: thermal          ! Bound thermal elastic & inelastic scattering
@@ -169,6 +170,7 @@ module nuclide_header
     real(8) :: absorption    ! macroscopic absorption xs
     real(8) :: fission       ! macroscopic fission xs
     real(8) :: nu_fission    ! macroscopic production xs
+    real(8) :: ngamma        ! macroscopic gamma xs
   end type MaterialMacroXS
 
 !===============================================================================
@@ -606,7 +608,7 @@ contains
     do i = 1, n_temperature
       ! Allocate and initialize derived cross sections
       n_grid = size(this % grid(i) % energy)
-      allocate(this % xs(i) % value(4,n_grid))
+      allocate(this % xs(i) % value(5,n_grid))
       this % xs(i) % value(:,:) = ZERO
     end do
 
@@ -643,6 +645,17 @@ contains
             this % xs(t) % value(XS_ABSORPTION,j:j+n-1) = this % xs(t) % &
                  value(XS_ABSORPTION,j:j+n-1) + rx % xs(t) % value
           end if
+
+          ! Get (n,gamma)
+          if (rx % MT == N_GAMMA) then
+            if ((this % name == 'He3') .or. (this % name == 'Be7') &
+                 .or. (this % name == 'H3') .or. (this % name == 'He4')) then
+              this % xs(t) % value(XS_GAMMA,j:j+n-1) = ZERO
+            else
+              this % xs(t) % value(XS_GAMMA,j:j+n-1) = rx % xs(t) % value
+            end if
+          end if
+
 
           ! Information about fission reactions
           if (t == 1) then
@@ -875,19 +888,17 @@ contains
       micro_xs % total = sig_t
       micro_xs % absorption = sig_a
       micro_xs % fission = sig_f
-
+      micro_xs % ngamma = sig_a - sig_f
       if (this % fissionable) then
         micro_xs % nu_fission = sig_f * this % nu(E, EMISSION_TOTAL)
       else
         micro_xs % nu_fission = ZERO
       end if
-
+      
       if (need_depletion_rx) then
         ! Initialize all reaction cross sections to zero
         micro_xs % reaction(:) = ZERO
 
-        ! Only non-zero reaction is (n,gamma)
-        micro_xs % reaction(1) = sig_a - sig_f
       end if
 
       ! Ensure these values are set
@@ -963,6 +974,9 @@ contains
         micro_xs % absorption = (ONE - f) * xs % value(XS_ABSORPTION, &
              i_grid) + f * xs % value(XS_ABSORPTION,i_grid + 1)
 
+        micro_xs % ngamma = (ONE - f) * xs % value(XS_GAMMA, &
+             i_grid) + f * xs % value(XS_GAMMA,i_grid + 1)
+
         if (this % fissionable) then
           ! Calculate microscopic nuclide total cross section
           micro_xs % fission = (ONE - f) * xs % value(XS_FISSION,i_grid) &
@@ -982,19 +996,9 @@ contains
         ! Initialize all reaction cross sections to zero
         micro_xs % reaction(:) = ZERO
 
-        ! Physics says that (n,gamma) is not a threshold reaction, so we don't
-        ! need to specifically check its threshold index
-        i_rxn = this % reaction_index(DEPLETION_RX(1))
-        if (i_rxn > 0) then
-          associate (xs => this % reactions(i_rxn) % xs(i_temp))
-          micro_xs % reaction(1) = (ONE - f) * &
-               xs % value(i_grid - xs % threshold + 1) + &
-               f * xs % value(i_grid - xs % threshold + 2)
-          end associate
-        end if
 
         ! Loop over remaining depletion reactions
-        do j = 2, 6
+        do j = 1, 5
           ! If reaction is present and energy is greater than threshold, set the
           ! reaction xs appropriately
           i_rxn = this % reaction_index(DEPLETION_RX(j))
@@ -1004,7 +1008,7 @@ contains
                 micro_xs % reaction(j) = (ONE - f) * &
                      xs % value(i_grid - xs % threshold + 1) + &
                      f * xs % value(i_grid - xs % threshold + 2)
-              elseif (j >= 4) then
+              elseif (j >= 3) then
                 ! One can show that the the threshold for (n,(x+1)n) is always
                 ! higher than the threshold for (n,xn). Thus, if we are below
                 ! the threshold for, e.g., (n,2n), there is no reason to check

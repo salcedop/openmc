@@ -1001,9 +1001,7 @@ contains
           if (i_rxn > 0) then
             associate (xs => this % reactions(i_rxn) % xs(i_temp))
               if (i_grid >= xs % threshold) then
-                micro_xs % reaction(j) = (ONE - f) * &
-                     xs % value(i_grid - xs % threshold + 1) + &
-                     f * xs % value(i_grid - xs % threshold + 2)
+                micro_xs % reaction(j) = ZERO
               elseif (j >= 4) then
                 ! One can show that the the threshold for (n,(x+1)n) is always
                 ! higher than the threshold for (n,xn). Thus, if we are below

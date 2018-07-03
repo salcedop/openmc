@@ -980,7 +980,7 @@ contains
       ! Depletion-related reactions
       if (need_depletion_rx) then
         ! Initialize all reaction cross sections to zero
-        micro_xs % reaction(:) = ZERO
+        micro_xs % reaction(1) = ZERO
 
         ! Physics says that (n,gamma) is not a threshold reaction, so we don't
         ! need to specifically check its threshold index
@@ -993,25 +993,6 @@ contains
           end associate
         end if
 
-        ! Loop over remaining depletion reactions
-        do j = 2, 6
-          ! If reaction is present and energy is greater than threshold, set the
-          ! reaction xs appropriately
-          i_rxn = this % reaction_index(DEPLETION_RX(j))
-          if (i_rxn > 0) then
-            associate (xs => this % reactions(i_rxn) % xs(i_temp))
-              if (i_grid >= xs % threshold) then
-                micro_xs % reaction(j) = ZERO
-              elseif (j >= 4) then
-                ! One can show that the the threshold for (n,(x+1)n) is always
-                ! higher than the threshold for (n,xn). Thus, if we are below
-                ! the threshold for, e.g., (n,2n), there is no reason to check
-                ! the threshold for (n,3n) and (n,4n).
-                exit
-              end if
-            end associate
-          end if
-        end do
       end if
     end if
 

@@ -1336,6 +1336,7 @@ contains
     integer :: i, j
     logical                 :: file_exists
     character(MAX_FILE_LEN) :: env_variable
+    character(MAX_FILE_LEN) :: groupr_env_variable
     character(MAX_LINE_LEN) :: filename
     type(XMLDocument)       :: doc
     type(XMLNode)           :: root
@@ -1360,6 +1361,7 @@ contains
       ! environment variable
       if (run_CE) then
         call get_environment_variable("OPENMC_CROSS_SECTIONS", env_variable)
+        call get_environment_variable("GROUPR_OPENMC_CROSS_SECTIONS",groupr_env_variable)
         if (len_trim(env_variable) == 0) then
           call get_environment_variable("CROSS_SECTIONS", env_variable)
           ! FIXME: When deprecated option of setting the cross sections in
@@ -1378,6 +1380,7 @@ contains
           end if
         end if
         path_cross_sections = trim(env_variable)
+        path_cross_sections_groupr = trim(groupr_env_variable)
       else
         call get_environment_variable("OPENMC_MG_CROSS_SECTIONS", env_variable)
           ! FIXME: When deprecated option of setting the mg cross sections in
@@ -1417,6 +1420,7 @@ contains
     ! Now that the cross_sections.xml or mgxs.h5 has been located, read it in
     if (run_CE) then
       call read_ce_cross_sections_xml()
+      call read_ce_groupr_cross_sections_xml()
     else
       call read_mg_cross_sections_header()
     end if
@@ -2265,7 +2269,9 @@ contains
               call fatal_error("Cannot tally flux with an outgoing energy &
                    &filter.")
             end if
-
+          case('group-flux')
+             t % score_bins(j) = SCORE_FLUX
+             t % has_group_flux = .true.
           case ('total', '(n,total)')
             t % score_bins(j) = SCORE_TOTAL
             if (t % find_filter(FILTER_ENERGYOUT) > 0) then
@@ -3244,6 +3250,105 @@ contains
 
   end subroutine read_plots_xml
 
+!===============================================================================
+! READ_*_CROSS_SECTIONS_XML reads information from a cross_sections.xml file. This
+! file contains a listing of the CE and MG cross sections that may be used.
+!===============================================================================
+
+  subroutine read_ce_groupr_cross_sections_xml()
+    integer :: i           ! loop index
+    integer :: n
+    integer :: n_libraries
+    logical :: file_exists ! does cross_sections.xml exist?
+    character(MAX_WORD_LEN) :: directory ! directory with cross sections
+    character(MAX_WORD_LEN) :: words(MAX_WORDS)
+    character(10000) :: temp_str
+    type(XMLDocument) :: doc
+    type(XMLNode) :: root
+    type(XMLNode) :: node_library
+    type(XMLNode), allocatable :: node_library_list(:)
+
+    ! Check if cross_sections.xml exists
+    inquire(FILE=path_cross_sections_groupr, EXIST=file_exists)
+    if (.not. file_exists) then
+      ! Could not find cross_sections.xml file
+      call fatal_error("GROUPR cross sections XML file '" &
+           // trim(path_cross_sections_groupr) // "' does not exist!")
+    end if
+
+    call write_message("Reading groupr cross sections XML file...", 6)
+
+    ! Parse cross_sections.xml file
+    call doc % load_file(path_cross_sections_groupr)
+    root = doc % document_element()
+
+    if (check_for_node(root, "directory")) then
+      ! Copy directory information if present
+      call get_node_value(root, "directory", directory)
+    else
+      ! If no directory is listed in cross_sections.xml, by default select the
+      ! directory in which the cross_sections.xml file resides
+      i = index(path_cross_sections_groupr, "/", BACK=.true.)
+      directory = path_cross_sections_groupr(1:i)
+    end if
+
+    ! Get node list of all <library>
+    call get_node_list(root, "library", node_library_list)
+    n_libraries = size(node_library_list)
+
+    ! Allocate xs_listings array
+    if (n_libraries == 0) then
+      call fatal_error("No cross section libraries present in cross_sections.xml &
+           &file!")
+    else
+      allocate(libraries(n_libraries))
+    end if
+
+    do i = 1, n_libraries
+      ! Get pointer to ace table XML node
+      node_library = node_library_list(i)
+
+      ! Get list of materials
+      if (check_for_node(node_library, "materials")) then
+        call get_node_value(node_library, "materials", temp_str)
+        call split_string(temp_str, words, n)
+        allocate(libraries(i) % materials(n))
+        libraries(i) % materials(:) = words(1:n)
+      end if
+
+      ! Get type of library
+      if (check_for_node(node_library, "type")) then
+        call get_node_value(node_library, "type", temp_str)
+        select case(to_lower(temp_str))
+        case ('neutron')
+          libraries(i) % type = LIBRARY_NEUTRON
+        case ('thermal')
+          libraries(i) % type = LIBRARY_THERMAL
+        end select
+      else
+        call fatal_error("Missing library type")
+      end if
+
+      ! determine path of cross section table
+      if (check_for_node(node_library, "path")) then
+        call get_node_value(node_library, "path", temp_str)
+      else
+        call fatal_error("Missing library path")
+      end if
+
+      libraries(i) % path = trim(directory) // '/' // trim(temp_str)
+
+      inquire(FILE=libraries(i) % path, EXIST=file_exists)
+      if (.not. file_exists) then
+        call warning("Cross section library " // trim(libraries(i) % path) // &
+             " does not exist.")
+      end if
+    end do
+
+    ! Close cross sections XML file
+    call doc % clear()
+
+  end subroutine read_ce_groupr_cross_sections_xml
 !===============================================================================
 ! READ_*_CROSS_SECTIONS_XML reads information from a cross_sections.xml file. This
 ! file contains a listing of the CE and MG cross sections that may be used.

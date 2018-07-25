@@ -98,6 +98,7 @@ module nuclide_header
 
     ! Reactions
     type(Reaction), allocatable :: reactions(:)
+    type(Groupr), allocatable :: groupr(7)
     integer, allocatable :: index_inelastic_scatter(:)
 
     ! Array that maps MT values to index in reactions; used at tally-time. Note
@@ -287,12 +288,15 @@ contains
     integer(HID_T) :: kT_group
     integer(HID_T) :: rxs_group
     integer(HID_T) :: rx_group
+    integer(HID_T) :: rxs_groupr
+    integer(HID_T) :: rx_groupr
     integer(HID_T) :: xs, temp_group
     integer(HID_T) :: total_nu
     integer(HID_T) :: fer_group                 ! fission_energy_release group
     integer(HID_T) :: fer_dset
     integer(HSIZE_T) :: j
     integer(HSIZE_T) :: dims(1)
+    character(10)  :: rxn_str
     character(MAX_WORD_LEN) :: temp_str
     character(MAX_WORD_LEN), allocatable :: dset_names(:)
     character(MAX_WORD_LEN), allocatable :: grp_names(:)
@@ -447,6 +451,17 @@ contains
       end if
     end do
 
+    rxs_groupr = open_group(group_id, 'reactions')
+
+    do i=1,size(DEPLETION_STRINGS)
+      rxn_str = DEPLETION_STRING(i)
+      rx_groupr = open_group(rxs_group, DEPLETION_STRING(i))
+      call this % groupr(i) % from_hdf5(rx_groupr)
+      call close_group(rx_groupr)
+    end do
+
+    call close_group(rxs_groupr)
+      
     ! Read reactions
     allocate(this % reactions(MTs % size()))
     do i = 1, size(this % reactions)

@@ -223,7 +223,8 @@ module constants
 
   ! Depletion reactions
   integer, parameter :: DEPLETION_RX(5) = [N_P, N_A, N_2N, N_3N, N_4N]
-
+  character(10),parameter :: DEPLETION_STRING(7) = &
+  ["(n,fission)","(n,2n)","(n,3n)","(n,4n)","(n,p)","(n,a)"]
   ! ACE table types
   integer, parameter :: &
        ACE_NEUTRON   = 1, & ! continuous-energy neutron

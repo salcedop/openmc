@@ -654,6 +654,44 @@ contains
 
   end subroutine print_overlap_check
 
+
+  subroutine collapse()
+
+    integer :: i
+    integer :: j
+    integer :: k
+    integer :: z
+    integer :: shift
+    integer :: n_nuclides
+    integer :: threshold
+    type(Material),pointer :: mat
+    real(8) :: dens
+    real(8) :: running_sum
+    real(8),allocatable :: group_tally_results(:,:,:)
+    
+   allocate(group_tally_results(7,SIZE(nuclides),n_materials))
+   group_tally_results(:,:,:) = ZERO
+
+    do i=1,n_materials
+       shift = 1499 * i
+       mat => materials(i)
+       n_nuclides = mat % n_nuclides
+       do j=1,n_nuclides
+         associate (inuc => nuclides(j))
+         dens = mat % atom_density(j)
+         do k=1,7
+           threshold = inuc % groupr(k) % threshold
+           associate (xs => inuc % groupr(k) % value)
+           do z=1,SIZE(xs)
+             running_sum = running_sum +xs*t%results(RESULT_SUM,1,&
+             shift+threshold+z)
+           end do
+           end associate
+         group_tally_results(k,j,i) = running_sum
+         end associate
+         end do
+       end do
+    end do
 !===============================================================================
 ! WRITE_TALLIES creates an output file and writes out the mean values of all
 ! tallies and their standard deviations

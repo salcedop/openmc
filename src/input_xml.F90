@@ -17,6 +17,7 @@ module input_xml
   use list_header,      only: ListChar, ListInt, ListReal
   use material_header
   use mesh_header
+  use groupr_header,    only: Groupr
   use message_passing
   use mgxs_data,        only: create_macro_xs, read_mgxs
   use mgxs_header
@@ -1429,6 +1430,13 @@ contains
     do i = 1, size(libraries)
       do j = 1, size(libraries(i) % materials)
         call library_dict % set(to_lower(libraries(i) % materials(j)), i)
+      end do
+    end do
+
+    ! Creating dictionary that maps the name of the material to the entry
+    do i = 1, size(libraries_groupr)
+      do j = 1, size(libraries_groupr(i) % materials)
+        call library_groupr_dict % set(to_lower(libraries_groupr(i) % materials(j)), i)
       end do
     end do
 
@@ -3260,7 +3268,7 @@ contains
     integer :: n
     integer :: n_libraries
     logical :: file_exists ! does cross_sections.xml exist?
-    character(MAX_WORD_LEN) :: directory ! directory with cross sections
+    character(MAX_WORD_LEN) :: directory_groupr ! directory with cross sections
     character(MAX_WORD_LEN) :: words(MAX_WORDS)
     character(10000) :: temp_str
     type(XMLDocument) :: doc
@@ -3284,12 +3292,12 @@ contains
 
     if (check_for_node(root, "directory")) then
       ! Copy directory information if present
-      call get_node_value(root, "directory", directory)
+      call get_node_value(root, "directory", directory_groupr)
     else
       ! If no directory is listed in cross_sections.xml, by default select the
       ! directory in which the cross_sections.xml file resides
       i = index(path_cross_sections_groupr, "/", BACK=.true.)
-      directory = path_cross_sections_groupr(1:i)
+      directory_groupr = path_cross_sections_groupr(1:i)
     end if
 
     ! Get node list of all <library>
@@ -3301,7 +3309,7 @@ contains
       call fatal_error("No cross section libraries present in cross_sections.xml &
            &file!")
     else
-      allocate(libraries(n_libraries))
+      allocate(libraries_groupr(n_libraries))
     end if
 
     do i = 1, n_libraries
@@ -3312,8 +3320,8 @@ contains
       if (check_for_node(node_library, "materials")) then
         call get_node_value(node_library, "materials", temp_str)
         call split_string(temp_str, words, n)
-        allocate(libraries(i) % materials(n))
-        libraries(i) % materials(:) = words(1:n)
+        allocate(libraries_groupr(i) % materials(n))
+        libraries_groupr(i) % materials(:) = words(1:n)
       end if
 
       ! Get type of library
@@ -3321,9 +3329,9 @@ contains
         call get_node_value(node_library, "type", temp_str)
         select case(to_lower(temp_str))
         case ('neutron')
-          libraries(i) % type = LIBRARY_NEUTRON
+          libraries_groupr(i) % type = LIBRARY_NEUTRON
         case ('thermal')
-          libraries(i) % type = LIBRARY_THERMAL
+          libraries_groupr(i) % type = LIBRARY_THERMAL
         end select
       else
         call fatal_error("Missing library type")
@@ -3336,11 +3344,11 @@ contains
         call fatal_error("Missing library path")
       end if
 
-      libraries(i) % path = trim(directory) // '/' // trim(temp_str)
+      libraries_groupr(i) % path = trim(directory_groupr) // '/' // trim(temp_str)
 
-      inquire(FILE=libraries(i) % path, EXIST=file_exists)
+      inquire(FILE=libraries_groupr(i) % path, EXIST=file_exists)
       if (.not. file_exists) then
-        call warning("Cross section library " // trim(libraries(i) % path) // &
+        call warning("Cross section library " // trim(libraries_groupr(i) % path) // &
              " does not exist.")
       end if
     end do
@@ -3616,20 +3624,30 @@ contains
 
   end subroutine normalize_ao
 
+
   subroutine read_ce_cross_sections(nuc_temps, sab_temps)
     type(VectorReal), intent(in)     :: nuc_temps(:)
     type(VectorReal), intent(in)     :: sab_temps(:)
 
-    integer :: i, j
+    integer :: i, j, kk
     integer :: i_library
+    integer :: i_library_groupr
+    
     integer :: i_nuclide
     integer :: i_sab
-    integer(HID_T) :: file_id
+    integer(HID_T) :: file_groupr_id
+    integer(HID_T) :: groupr_id
     integer(HID_T) :: group_id
+    integer(HID_T) :: file_id
+    integer(HID_T) :: kT_group
+    integer(HID_T) :: rxs_groupr
+    integer(HID_T) :: rx_groupr
+    character(15)  :: rxn_str
     logical :: mp_found     ! if windowed multipole libraries were found
     character(MAX_WORD_LEN) :: name
     type(SetChar) :: already_read
-
+    
+    type(string_arr) :: DEPLETION_STRING(7)
     allocate(nuclides(n_nuclides))
     allocate(sab_tables(n_sab_tables))
 
@@ -3637,7 +3655,6 @@ contains
     do i = 1, size(materials)
       do j = 1, size(materials(i) % names)
         name = materials(i) % names(j)
-
         if (.not. already_read % contains(name)) then
           i_library = library_dict % get(to_lower(name))
           i_nuclide = nuclide_dict % get(to_lower(name))
@@ -3648,6 +3665,38 @@ contains
           ! Open file and make sure version is sufficient
           file_id = file_open(libraries(i_library) % path, 'r')
           call check_data_version(file_id)
+          
+          if (library_groupr_dict % has(to_lower(name))) then
+            i_library_groupr = library_groupr_dict % get(to_lower(name))
+            call write_message('Reading ' // trim(name) // 'from ' // &
+               trim(libraries_groupr(i_library_groupr) % path), 6)
+            
+            ! Open file and make sure version is sufficient
+            file_groupr_id = file_open(libraries_groupr(i_library_groupr) % path, 'r')
+            call check_data_version(file_groupr_id)
+            groupr_id = open_group(file_groupr_id, name)
+            rxs_groupr = open_group(groupr_id, "reactions")
+
+            DEPLETION_STRING(1) % str = "(n,fission)"
+            DEPLETION_STRING(2) % str = "(n,2n)"
+            DEPLETION_STRING(3) % str = "(n,3n)"
+            DEPLETION_STRING(4) % str = "(n,4n)"
+            DEPLETION_STRING(5) % str = "(n,p)"
+            DEPLETION_STRING(6) % str = "(n,a)"
+            DEPLETION_STRING(7) % str = "(n,g)"
+
+            do kk=1,7
+              rxn_str = DEPLETION_STRING(kk) % str
+              if (object_exists(rxs_groupr,rxn_str)) then
+               rx_groupr = open_group(rxs_groupr, rxn_str)
+               call nuclides(i_nuclide) % groupr(kk) % from_hdf5(rx_groupr)
+               call close_group(rx_groupr)
+              end if
+            end do
+
+            call close_group(rxs_groupr)
+
+          end if 
 
           ! Read nuclide data from HDF5
           group_id = open_group(file_id, name)

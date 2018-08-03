@@ -664,34 +664,59 @@ contains
     integer :: shift
     integer :: n_nuclides
     integer :: threshold
+    integer :: saving
+    integer :: inuc_int
     type(Material),pointer :: mat
+    type(TallyObject), pointer :: t
+    
     real(8) :: dens
     real(8) :: running_sum
     real(8),allocatable :: group_tally_results(:,:,:)
-    
-   allocate(group_tally_results(7,SIZE(nuclides),n_materials))
-   group_tally_results(:,:,:) = ZERO
-
+    integer :: fuel_index
+    integer :: nr_1
+    allocate(group_tally_results(7,SIZE(nuclides),1))
+    group_tally_results(:,:,:) = ZERO
+    associate(t => tallies(2) % obj)
+    nr_1 = t % n_realizations
+   
     do i=1,n_materials
-       shift = 1499 * i
+       shift = 0
        mat => materials(i)
+       if (mat % id == 10015) then
        n_nuclides = mat % n_nuclides
+       fuel_index = i
        do j=1,n_nuclides
-         associate (inuc => nuclides(j))
+         inuc_int = mat % nuclide(j)
+         associate (inuc => nuclides(inuc_int))
          dens = mat % atom_density(j)
+         PRINT*, inuc % name
          do k=1,7
-           threshold = inuc % groupr(k) % threshold
-           associate (xs => inuc % groupr(k) % value)
-           do z=1,SIZE(xs)
-             running_sum = running_sum +xs*t%results(RESULT_SUM,1,&
-             shift+threshold+z)
+           PRINT*, k
+           running_sum = ZERO
+           threshold = inuc % groupr(k) % xs % threshold
+           PRINT*, threshold
+           associate (xs => inuc % groupr(k) % xs)
+           do z=1,SIZE(xs % value)
+             if (threshold == 0) then
+             running_sum = 0
+             else
+             running_sum = running_sum + xs % value(z) * (t % results(RESULT_SUM,1,&
+             shift+threshold+z-1)) / nr_1
+             end if
            end do
            end associate
-         group_tally_results(k,j,i) = running_sum
-         end associate
+         group_tally_results(k,j,1) = running_sum * dens
          end do
+        end associate
        end do
+      else 
+       cycle
+      end if
     end do
+    end associate 
+    PRINT*, group_tally_results(:,1,1)
+    
+   end subroutine collapse
 !===============================================================================
 ! WRITE_TALLIES creates an output file and writes out the mean values of all
 ! tallies and their standard deviations

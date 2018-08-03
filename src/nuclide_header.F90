@@ -3,6 +3,7 @@ module nuclide_header
   use, intrinsic :: ISO_FORTRAN_ENV
   use, intrinsic :: ISO_C_BINDING
 
+  use groupr_header,          only: Groupr
   use algorithm,              only: sort, find, binary_search
   use constants
   use dict_header,            only: DictIntInt, DictCharInt
@@ -98,7 +99,7 @@ module nuclide_header
 
     ! Reactions
     type(Reaction), allocatable :: reactions(:)
-    type(Groupr), allocatable :: groupr(7)
+    type(Groupr) :: groupr(7)
     integer, allocatable :: index_inelastic_scatter(:)
 
     ! Array that maps MT values to index in reactions; used at tally-time. Note
@@ -186,8 +187,10 @@ module nuclide_header
 
   ! Cross section libraries
   type(Library), allocatable :: libraries(:)
+  type(Library), allocatable :: libraries_groupr(:)
   type(DictCharInt) :: library_dict
-
+  
+  type(DictCharInt) :: library_groupr_dict
   ! Nuclear data for each nuclide
   type(Nuclide), allocatable, target :: nuclides(:)
   integer(C_INT), bind(C) :: n_nuclides
@@ -286,17 +289,14 @@ contains
     integer(HID_T) :: urr_group, nu_group
     integer(HID_T) :: energy_group, energy_dset
     integer(HID_T) :: kT_group
-    integer(HID_T) :: rxs_group
     integer(HID_T) :: rx_group
-    integer(HID_T) :: rxs_groupr
-    integer(HID_T) :: rx_groupr
+    integer(HID_T) :: rxs_group
     integer(HID_T) :: xs, temp_group
     integer(HID_T) :: total_nu
     integer(HID_T) :: fer_group                 ! fission_energy_release group
     integer(HID_T) :: fer_dset
     integer(HSIZE_T) :: j
     integer(HSIZE_T) :: dims(1)
-    character(10)  :: rxn_str
     character(MAX_WORD_LEN) :: temp_str
     character(MAX_WORD_LEN), allocatable :: dset_names(:)
     character(MAX_WORD_LEN), allocatable :: grp_names(:)
@@ -306,7 +306,6 @@ contains
     type(VectorInt) :: MTs
     type(VectorInt) :: temps_to_read
     type(VectorInt) :: index_inelastic_scatter
-
     ! Get name of nuclide from group
     this % name = get_name(group_id)
 
@@ -451,16 +450,6 @@ contains
       end if
     end do
 
-    rxs_groupr = open_group(group_id, 'reactions')
-
-    do i=1,size(DEPLETION_STRINGS)
-      rxn_str = DEPLETION_STRING(i)
-      rx_groupr = open_group(rxs_group, DEPLETION_STRING(i))
-      call this % groupr(i) % from_hdf5(rx_groupr)
-      call close_group(rx_groupr)
-    end do
-
-    call close_group(rxs_groupr)
       
     ! Read reactions
     allocate(this % reactions(MTs % size()))
@@ -1594,20 +1583,21 @@ contains
     integer(HID_T), intent(in) :: file_id
 
     integer, allocatable :: version(:)
-
-    if (attribute_exists(file_id, 'version')) then
-      call read_attribute(version, file_id, 'version')
-      if (version(1) /= HDF5_VERSION(1)) then
-        call fatal_error("HDF5 data format uses version " // trim(to_str(&
-             version(1))) // "." // trim(to_str(version(2))) // " whereas &
-             &your installation of OpenMC expects version " // trim(to_str(&
-             HDF5_VERSION(1))) // ".x data.")
-      end if
-    else
-      call fatal_error("HDF5 data does not indicate a version. Your &
-           &installation of OpenMC expects version " // trim(to_str(&
-           HDF5_VERSION(1))) // ".x data.")
-    end if
+    
+    !if (attribute_exists(file_id, 'version')) then
+    !  call read_attribute(version, file_id, 'version')
+    !  if (version(1) /= HDF5_VERSION(1)) then
+    !    call fatal_error("HDF5 data format uses version " // trim(to_str(&
+    !         version(1))) // "." // trim(to_str(version(2))) // " whereas &
+    !         &your installation of OpenMC expects version " // trim(to_str(&
+    !         HDF5_VERSION(1))) // ".x data.")
+    !  end if
+    !else
+    !  call fatal_error("HDF5 data does not indicate a version. Your &
+    !       &installation of OpenMC expects version " // trim(to_str(&
+    !       HDF5_VERSION(1))) // ".x data.")
+    !end if
+    !
   end subroutine check_data_version
 
 !===============================================================================
@@ -1628,7 +1618,8 @@ contains
     n_nuclides = 0
 
     if (allocated(libraries)) deallocate(libraries)
-
+    
+    if (allocated(libraries_groupr)) deallocate(libraries_groupr)
     call nuclide_dict % clear()
     call library_dict % clear()
 

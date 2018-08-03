@@ -3683,7 +3683,7 @@ contains
             DEPLETION_STRING(4) % str = "(n,4n)"
             DEPLETION_STRING(5) % str = "(n,p)"
             DEPLETION_STRING(6) % str = "(n,a)"
-            DEPLETION_STRING(7) % str = "(n,g)"
+            DEPLETION_STRING(7) % str = "(n,gamma)"
 
             do kk=1,7
               rxn_str = DEPLETION_STRING(kk) % str

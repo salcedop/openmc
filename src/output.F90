@@ -664,24 +664,20 @@ contains
     integer :: shift
     integer :: n_nuclides
     integer :: threshold
-    integer :: saving
     integer :: inuc_int
-    type(Material),pointer :: mat
-    type(TallyObject), pointer :: t
-    
     real(8) :: dens
     real(8) :: running_sum
     real(8),allocatable :: group_tally_results(:,:,:)
     integer :: fuel_index
     integer :: nr_1
-    allocate(group_tally_results(7,SIZE(nuclides),1))
+    allocate(group_tally_results(7,290,1))
     group_tally_results(:,:,:) = ZERO
     associate(t => tallies(2) % obj)
     nr_1 = t % n_realizations
    
     do i=1,n_materials
        shift = 0
-       mat => materials(i)
+       associate(mat => materials(i))
        if (mat % id == 10015) then
        n_nuclides = mat % n_nuclides
        fuel_index = i
@@ -691,17 +687,17 @@ contains
          dens = mat % atom_density(j)
          PRINT*, inuc % name
          do k=1,7
-           PRINT*, k
+           PRINT*, k 
            running_sum = ZERO
-           threshold = inuc % groupr(k) % xs % threshold
-           PRINT*, threshold
            associate (xs => inuc % groupr(k) % xs)
+           threshold = xs % threshold
+        
            do z=1,SIZE(xs % value)
              if (threshold == 0) then
-             running_sum = 0
+             running_sum = ZERO
              else
              running_sum = running_sum + xs % value(z) * (t % results(RESULT_SUM,1,&
-             shift+threshold+z-1)) / nr_1
+             threshold+z-1)) / nr_1
              end if
            end do
            end associate
@@ -712,9 +708,12 @@ contains
       else 
        cycle
       end if
+      end associate
     end do
+    
     end associate 
     PRINT*, group_tally_results(:,1,1)
+    
     
    end subroutine collapse
 !===============================================================================

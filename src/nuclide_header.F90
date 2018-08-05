@@ -55,6 +55,10 @@ module nuclide_header
   type SumXS
     real(8), allocatable :: value(:,:)
   end type SumXS
+  
+  type GrouprNuclide
+    type(Groupr) :: groupr(7)
+  end type GrouprNuclide
 
   type :: Nuclide
     ! Nuclide meta-data
@@ -99,7 +103,6 @@ module nuclide_header
 
     ! Reactions
     type(Reaction), allocatable :: reactions(:)
-    type(Groupr) :: groupr(7)
     integer, allocatable :: index_inelastic_scatter(:)
 
     ! Array that maps MT values to index in reactions; used at tally-time. Note
@@ -185,17 +188,24 @@ module nuclide_header
     character(MAX_FILE_LEN) :: path
   end type Library
 
+  type LibraryGroupr
+    integer :: type
+    character(MAX_FILE_LEN) :: str
+    character(MAX_FILE_LEN) :: path
+  end type LibraryGroupr
   ! Cross section libraries
   type(Library), allocatable :: libraries(:)
-  type(Library), allocatable :: libraries_groupr(:)
+  type(LibraryGroupr), allocatable :: libraries_groupr(:)
   type(DictCharInt) :: library_dict
-  
   type(DictCharInt) :: library_groupr_dict
+
   ! Nuclear data for each nuclide
   type(Nuclide), allocatable, target :: nuclides(:)
+  type(GrouprNuclide), allocatable, target :: nuclides_groupr(:)
+  integer :: n_nuclides_groupr
   integer(C_INT), bind(C) :: n_nuclides
   type(DictCharInt) :: nuclide_dict
-
+  type(DictIntInt) :: nuclide_dict_groupr
   ! Cross section caches
   type(NuclideMicroXS), allocatable :: micro_xs(:)  ! Cache for each nuclide
   type(MaterialMacroXS)             :: material_xs  ! Cache for current material
@@ -271,6 +281,7 @@ contains
     if (associated(this % multipole)) deallocate(this % multipole)
 
   end subroutine nuclide_clear
+
 
   subroutine nuclide_from_hdf5(this, group_id, temperature, method, tolerance, &
                                minmax, master, i_nuclide)

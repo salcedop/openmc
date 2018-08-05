@@ -9,6 +9,7 @@ module output
   use endf,            only: reaction_name
   use error,           only: fatal_error, warning
   use geometry_header
+  use material_header, only: n_fuel,mat_fuel_dict
   use math,            only: t_percentile
   use mesh_header,     only: RegularMesh, meshes
   use message_passing, only: master, n_procs
@@ -661,35 +662,38 @@ contains
     integer :: j
     integer :: k
     integer :: z
+    integer :: mat_id
+    integer :: fuel_id
     integer :: shift
-    integer :: n_nuclides
+    integer :: mat_nuclides
     integer :: threshold
     integer :: inuc_int
+    integer :: inuc_groupr
     real(8) :: dens
     real(8) :: running_sum
     real(8),allocatable :: group_tally_results(:,:,:)
     integer :: fuel_index
     integer :: nr_1
-    allocate(group_tally_results(7,290,1))
+    allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
     group_tally_results(:,:,:) = ZERO
     associate(t => tallies(2) % obj)
     nr_1 = t % n_realizations
    
-    do i=1,n_materials
+    do i=1,n_fuel
        shift = 0
-       associate(mat => materials(i))
-       if (mat % id == 10015) then
-       n_nuclides = mat % n_nuclides
-       fuel_index = i
-       do j=1,n_nuclides
+       fuel_id  = mat_fuel_dict % get(i)
+       mat_id = material_dict % get(fuel_id)
+       associate(mat => materials(mat_id))
+       mat_nuclides = mat % n_nuclides
+       do j=1, mat_nuclides
          inuc_int = mat % nuclide(j)
-         associate (inuc => nuclides(inuc_int))
+         inuc_groupr = nuclide_dict_groupr % get(inuc_int)
+         associate(inuc => nuclides_groupr(inuc_groupr))
          dens = mat % atom_density(j)
-         PRINT*, inuc % name
          do k=1,7
-           PRINT*, k 
+           
            running_sum = ZERO
-           associate (xs => inuc % groupr(k) % xs)
+           associate(xs => inuc % groupr(k) % xs)
            threshold = xs % threshold
         
            do z=1,SIZE(xs % value)
@@ -701,18 +705,15 @@ contains
              end if
            end do
            end associate
-         group_tally_results(k,j,1) = running_sum * dens
+         group_tally_results(k,j,i) = running_sum * dens
          end do
         end associate
        end do
-      else 
-       cycle
-      end if
       end associate
     end do
     
     end associate 
-    PRINT*, group_tally_results(:,1,1)
+    !PRINT*, group_tally_results(:,1,1)
     
     
    end subroutine collapse

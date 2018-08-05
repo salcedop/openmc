@@ -1434,11 +1434,11 @@ contains
     end do
 
     ! Creating dictionary that maps the name of the material to the entry
-    do i = 1, size(libraries_groupr)
-      do j = 1, size(libraries_groupr(i) % materials)
-        call library_groupr_dict % set(to_lower(libraries_groupr(i) % materials(j)), i)
-      end do
-    end do
+    !do i = 1, size(libraries_groupr)
+    !  do j = 1, size(libraries_groupr(i) % materials)
+        !call library_groupr_dict % set(to_lower(libraries_groupr(i) % materials(j)), i)
+    !  end do
+    !end do
 
     ! Check that 0K nuclides are listed in the cross_sections.xml file
     if (allocated(res_scat_nuclides)) then
@@ -1454,17 +1454,19 @@ contains
 
   subroutine read_materials_xml(material_temps)
     real(8), allocatable, intent(out) :: material_temps(:)
-
     integer :: i              ! loop index for materials
     integer :: j              ! loop index for nuclides
     integer :: k              ! loop index
     integer :: n              ! number of nuclides
     integer :: n_sab          ! number of sab tables for a material
     integer :: i_library      ! index in libraries array
+    integer :: ilib
+    integer :: i_nuclide_reg
     integer :: index_nuclide  ! index in nuclides
     integer :: index_sab      ! index in sab_tables
     logical :: file_exists    ! does materials.xml exist?
     character(20)           :: name         ! name of nuclide, e.g. 92235.03c
+    character(MAX_WORD_LEN)           :: name_groupr
     character(MAX_WORD_LEN) :: units        ! units on density
     character(MAX_LINE_LEN) :: filename     ! absolute path to materials.xml
     character(MAX_LINE_LEN) :: temp_str     ! temporary string when reading
@@ -1514,7 +1516,7 @@ contains
     ! Initialize count for number of nuclides/S(a,b) tables
     index_nuclide = 0
     index_sab = 0
-
+    n_fuel  = 0
     do i = 1, n_materials
       mat => materials(i)
 
@@ -1533,6 +1535,7 @@ contains
         call get_node_value(node_mat, "depletable", temp_str)
         if (to_lower(temp_str) == "true" .or. temp_str == "1") &
              mat % depletable = .true.
+          
       end if
 
       ! Check to make sure 'id' hasn't been used
@@ -1737,6 +1740,16 @@ contains
       allocate(mat % nuclide(n))
       allocate(mat % atom_density(n))
 
+      !determine if material is depletable by checking logical attributes 
+      !and number of nuclides (> 200 nuclides should be depletable material)
+
+
+      if (n > 200 .or. mat % depletable) then
+        n_fuel = n_fuel + 1
+        call mat_fuel_dict % set(n_fuel,mat % id)
+        
+      end if
+
       ALL_NUCLIDES: do j = 1, mat % n_nuclides
         ! Check that this nuclide is listed in the cross_sections.xml file
         name = trim(names % data(j))
@@ -1745,7 +1758,7 @@ contains
                // " in cross_sections data file!")
         end if
         i_library = library_dict % get(to_lower(name))
-
+        
         if (run_CE) then
           ! Check to make sure cross-section is continuous energy neutron table
           if (libraries(i_library) % type /= LIBRARY_NEUTRON) then
@@ -1761,6 +1774,7 @@ contains
           mat % nuclide(j) = index_nuclide
 
           call nuclide_dict % set(to_lower(name), index_nuclide)
+          
         else
           mat % nuclide(j) = nuclide_dict % get(to_lower(name))
         end if
@@ -1770,6 +1784,7 @@ contains
         mat % atom_density(j) = densities % data(j)
 
       end do ALL_NUCLIDES
+
 
       if (run_CE) then
         ! By default, isotropic-in-lab is not used
@@ -1878,8 +1893,15 @@ contains
       call material_dict % set(mat % id, i)
     end do
 
+    do ilib = 1,size(libraries_groupr)
+        name_groupr = libraries_groupr(ilib) % str
+        i_nuclide_reg = nuclide_dict % get(to_lower(name_groupr))
+        call nuclide_dict_groupr % set(i_nuclide_reg,ilib)
+    end do
+
     ! Set total number of nuclides and S(a,b) tables
     n_nuclides = index_nuclide
+    n_nuclides_groupr = SIZE(libraries_groupr)
     n_sab_tables = index_sab
 
     ! Close materials XML file
@@ -3318,10 +3340,11 @@ contains
 
       ! Get list of materials
       if (check_for_node(node_library, "materials")) then
+        
         call get_node_value(node_library, "materials", temp_str)
-        call split_string(temp_str, words, n)
-        allocate(libraries_groupr(i) % materials(n))
-        libraries_groupr(i) % materials(:) = words(1:n)
+      
+        libraries_groupr(i) % str = trim(temp_str)
+        
       end if
 
       ! Get type of library
@@ -3344,7 +3367,7 @@ contains
         call fatal_error("Missing library path")
       end if
 
-      libraries_groupr(i) % path = trim(directory_groupr) // '/' // trim(temp_str)
+      libraries_groupr(i) % path = trim(directory_groupr) // trim(temp_str)
 
       inquire(FILE=libraries_groupr(i) % path, EXIST=file_exists)
       if (.not. file_exists) then
@@ -3629,11 +3652,12 @@ contains
     type(VectorReal), intent(in)     :: nuc_temps(:)
     type(VectorReal), intent(in)     :: sab_temps(:)
 
-    integer :: i, j, kk
+    integer :: i, j, k,irxn
     integer :: i_library
     integer :: i_library_groupr
     
     integer :: i_nuclide
+    integer :: i_nuclide_groupr
     integer :: i_sab
     integer(HID_T) :: file_groupr_id
     integer(HID_T) :: groupr_id
@@ -3645,11 +3669,46 @@ contains
     character(15)  :: rxn_str
     logical :: mp_found     ! if windowed multipole libraries were found
     character(MAX_WORD_LEN) :: name
+   
+    character(MAX_WORD_LEN) :: name_groupr
     type(SetChar) :: already_read
     
     type(string_arr) :: DEPLETION_STRING(7)
     allocate(nuclides(n_nuclides))
+    allocate(nuclides_groupr(n_nuclides_groupr))
     allocate(sab_tables(n_sab_tables))
+    
+    do k=1,size(libraries_groupr)
+     
+     name_groupr = libraries_groupr(k) % str     
+     call write_message('Reading ' // trim(name_groupr) // ' from ' // &
+               trim(libraries_groupr(k) % path), 6)
+            
+     ! Open file and make sure version is sufficient
+     file_groupr_id = file_open(libraries_groupr(k) % path, 'r')
+     call check_data_version(file_groupr_id)
+     groupr_id = open_group(file_groupr_id, name_groupr)
+     rxs_groupr = open_group(groupr_id, "reactions")
+
+     DEPLETION_STRING(1) % str = "(n,fission)"
+     DEPLETION_STRING(2) % str = "(n,2n)"
+     DEPLETION_STRING(3) % str = "(n,3n)"
+     DEPLETION_STRING(4) % str = "(n,4n)"
+     DEPLETION_STRING(5) % str = "(n,p)"
+     DEPLETION_STRING(6) % str = "(n,a)"
+     DEPLETION_STRING(7) % str = "(n,gamma)"
+
+     do irxn=1,7
+        rxn_str = DEPLETION_STRING(irxn) % str
+        if (object_exists(rxs_groupr,rxn_str)) then
+            rx_groupr = open_group(rxs_groupr, rxn_str)
+            call nuclides_groupr(k) % groupr(irxn) % from_hdf5(rx_groupr)
+            call close_group(rx_groupr)
+         end if
+     end do
+
+     call close_group(rxs_groupr)
+    end do
 
     ! Read cross sections
     do i = 1, size(materials)
@@ -3665,38 +3724,7 @@ contains
           ! Open file and make sure version is sufficient
           file_id = file_open(libraries(i_library) % path, 'r')
           call check_data_version(file_id)
-          
-          if (library_groupr_dict % has(to_lower(name))) then
-            i_library_groupr = library_groupr_dict % get(to_lower(name))
-            call write_message('Reading ' // trim(name) // 'from ' // &
-               trim(libraries_groupr(i_library_groupr) % path), 6)
-            
-            ! Open file and make sure version is sufficient
-            file_groupr_id = file_open(libraries_groupr(i_library_groupr) % path, 'r')
-            call check_data_version(file_groupr_id)
-            groupr_id = open_group(file_groupr_id, name)
-            rxs_groupr = open_group(groupr_id, "reactions")
-
-            DEPLETION_STRING(1) % str = "(n,fission)"
-            DEPLETION_STRING(2) % str = "(n,2n)"
-            DEPLETION_STRING(3) % str = "(n,3n)"
-            DEPLETION_STRING(4) % str = "(n,4n)"
-            DEPLETION_STRING(5) % str = "(n,p)"
-            DEPLETION_STRING(6) % str = "(n,a)"
-            DEPLETION_STRING(7) % str = "(n,gamma)"
-
-            do kk=1,7
-              rxn_str = DEPLETION_STRING(kk) % str
-              if (object_exists(rxs_groupr,rxn_str)) then
-               rx_groupr = open_group(rxs_groupr, rxn_str)
-               call nuclides(i_nuclide) % groupr(kk) % from_hdf5(rx_groupr)
-               call close_group(rx_groupr)
-              end if
-            end do
-
-            call close_group(rxs_groupr)
-
-          end if 
+           
 
           ! Read nuclide data from HDF5
           group_id = open_group(file_id, name)

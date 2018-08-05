@@ -69,12 +69,12 @@ module material_header
   end type Material
 
   integer(C_INT32_T), public, bind(C) :: n_materials ! # of materials
-
+  integer,public :: n_fuel
   type(Material), public, allocatable, target :: materials(:)
 
   ! Dictionary that maps user IDs to indices in 'materials'
   type(DictIntInt), public :: material_dict
-
+  type(DictIntInt), public :: mat_fuel_dict
 contains
 
 !===============================================================================

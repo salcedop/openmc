@@ -35,7 +35,7 @@ module input_xml
                               zero_padded, to_c_string
   use summary,          only: write_summary
   use tally
-  use tally_header,     only: openmc_extend_tallies
+  use tally_header,     only: openmc_extend_tallies, has_group_flux
   use tally_derivative_header
   use tally_filter_header
   use tally_filter
@@ -1744,7 +1744,7 @@ contains
       !and number of nuclides (> 200 nuclides should be depletable material)
 
 
-      if (n > 200 .or. mat % depletable) then
+      if (n > 240 .or. mat % depletable) then
         n_fuel = n_fuel + 1
         call mat_fuel_dict % set(n_fuel,mat % id)
         
@@ -2301,7 +2301,7 @@ contains
             end if
           case('group-flux')
              t % score_bins(j) = SCORE_FLUX
-             t % has_group_flux = .true.
+             has_group_flux = .true.
           case ('total', '(n,total)')
             t % score_bins(j) = SCORE_TOTAL
             if (t % find_filter(FILTER_ENERGYOUT) > 0) then

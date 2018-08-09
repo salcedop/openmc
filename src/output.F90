@@ -674,47 +674,49 @@ contains
     real(8),allocatable :: group_tally_results(:,:,:)
     integer :: fuel_index
     integer :: nr_1
+    integer :: groupr_size
     allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
     group_tally_results(:,:,:) = ZERO
     associate(t => tallies(2) % obj)
     nr_1 = t % n_realizations
-   
+    groupr_size = SIZE(t % results(RESULT_SUM,1,:)) / n_fuel
+    !$omp parallel do schedule(static)
     do i=1,n_fuel
-       shift = 0
+       shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
        associate(mat => materials(mat_id))
        mat_nuclides = mat % n_nuclides
-       do j=1, mat_nuclides
+       do j=1,mat_nuclides
          inuc_int = mat % nuclide(j)
+         if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
          inuc_groupr = nuclide_dict_groupr % get(inuc_int)
          associate(inuc => nuclides_groupr(inuc_groupr))
          dens = mat % atom_density(j)
          do k=1,7
-           
            running_sum = ZERO
            associate(xs => inuc % groupr(k) % xs)
-           threshold = xs % threshold
-        
+           threshold = xs % threshold    
            do z=1,SIZE(xs % value)
              if (threshold == 0) then
              running_sum = ZERO
              else
              running_sum = running_sum + xs % value(z) * (t % results(RESULT_SUM,1,&
-             threshold+z-1)) / nr_1
+             threshold+z-1+shift)) / nr_1
              end if
            end do
            end associate
-         group_tally_results(k,j,i) = running_sum * dens
+         group_tally_results(k,inuc_groupr,i) = running_sum * dens
          end do
         end associate
        end do
       end associate
     end do
-    
-    end associate 
-    !PRINT*, group_tally_results(:,1,1)
-    
+    !$omp end parallel do
+    end associate
+    if (master) then 
+     PRINT*, group_tally_results(:,1,1)
+    end if
     
    end subroutine collapse
 !===============================================================================

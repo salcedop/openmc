@@ -52,7 +52,6 @@ module tally_header
     real(8) :: volume               ! volume of region
     logical :: active = .false.
     logical :: depletion_rx = .false. ! has depletion reactions, e.g. (n,2n)
-    logical :: has_group_flux = .false. !whether to tally-group-flux
     integer, allocatable :: filter(:) ! index in filters array
 
     ! The stride attribute is used for determining the index in the results
@@ -113,6 +112,7 @@ module tally_header
 
   integer(C_INT32_T), public, bind(C) :: n_tallies = 0 ! # of tallies
 
+  logical,public :: has_group_flux = .false.!whether to tally-group-flux
   type(TallyContainer),  public, allocatable, target :: tallies(:)
 
   ! Dictionary that maps user IDs to indices in 'tallies'

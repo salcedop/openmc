@@ -548,7 +548,7 @@ contains
 
     ! Write tally results to tallies.out
     if (output_tallies .and. master) call write_tallies()
-    if (master) call collapse()
+    if (master .and. has_group_flux) call collapse()
     ! Stop timers and show timing statistics
     call time_finalize%stop()
     call time_total%stop()

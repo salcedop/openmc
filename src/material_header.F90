@@ -42,7 +42,7 @@ module material_header
     ! index of the corresponding nuclide in the Material % nuclide(:) array. If
     ! it is not present in the material, the entry is set to zero.
     integer, allocatable :: mat_nuclide_index(:)
-
+    !integer, allocatable :: mat_groupr_index(:)
     ! S(a,b) data
     integer              :: n_sab = 0         ! number of S(a,b) tables
     integer, allocatable :: i_sab_nuclides(:) ! index of corresponding nuclide
@@ -123,7 +123,7 @@ contains
   subroutine material_init_nuclide_index(this)
     class(Material), intent(inout) :: this
 
-    integer :: i
+    integer :: i,inuc
 
     ! Allocate nuclide index array and set to zeros
     if (allocated(this % mat_nuclide_index)) &
@@ -131,9 +131,17 @@ contains
     allocate(this % mat_nuclide_index(n_nuclides))
     this % mat_nuclide_index(:) = 0
 
+    !if (allocated(this % mat_groupr_index)) &
+    !     deallocate(this % mat_groupr_index)
+    !allocate(this % mat_nuclide_index(n_nuclides))
+    !this % mat_groupr_index(:) = 0
     ! Assign entries in the index array
     do i = 1, this % n_nuclides
-      this % mat_nuclide_index(this % nuclide(i)) = i
+      inuc = this % nuclide(i)
+      this % mat_nuclide_index(inuc) = i
+      !if (nuclide_groupr % has(inuc)) then
+      !  this % mat_groupr_index(inuc) = nuclide_groupr % get(inuc)
+      !end if  
     end do
   end subroutine material_init_nuclide_index
 

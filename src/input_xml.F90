@@ -1895,6 +1895,7 @@ contains
 
     do ilib = 1,size(libraries_groupr)
         name_groupr = libraries_groupr(ilib) % str
+        if (.not. nuclide_dict % has(to_lower(name_groupr))) cycle
         i_nuclide_reg = nuclide_dict % get(to_lower(name_groupr))
         call nuclide_dict_groupr % set(i_nuclide_reg,ilib)
     end do

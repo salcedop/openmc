@@ -9,6 +9,7 @@ module output
   use endf,            only: reaction_name
   use error,           only: fatal_error, warning
   use geometry_header
+  use groupr_header
   use material_header, only: n_fuel,mat_fuel_dict
   use math,            only: t_percentile
   use mesh_header,     only: RegularMesh, meshes
@@ -675,27 +676,35 @@ contains
     integer :: fuel_index
     integer :: nr_1
     integer :: groupr_size
+    type(Material), pointer :: mat
+    type(GrouprNuclide), pointer :: inuc
+    type(TallyObject), pointer :: t
+    type(GrouprXS), pointer :: xs
     allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
     group_tally_results(:,:,:) = ZERO
-    associate(t => tallies(2) % obj)
+    t => tallies(2) % obj
     nr_1 = t % n_realizations
     groupr_size = SIZE(t % results(RESULT_SUM,1,:)) / n_fuel
-    !$omp parallel do schedule(static)
+    !$omp parallel do schedule(static) private(shift,fuel_id,mat_id,&
+    !$omp&                                  mat_nuclides,inuc_groupr,dens,inuc_int,threshold,running_sum,&
+    !$omp&                                  mat,inuc,xs) shared(group_tally_results,t,groupr_size,nr_1,&
+    !$omp&                                  mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr)
     do i=1,n_fuel
        shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
-       associate(mat => materials(mat_id))
+       PRINT*, mat_id
+       mat => materials(mat_id)
        mat_nuclides = mat % n_nuclides
        do j=1,mat_nuclides
          inuc_int = mat % nuclide(j)
          if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
          inuc_groupr = nuclide_dict_groupr % get(inuc_int)
-         associate(inuc => nuclides_groupr(inuc_groupr))
+         inuc => nuclides_groupr(inuc_groupr)
          dens = mat % atom_density(j)
          do k=1,7
            running_sum = ZERO
-           associate(xs => inuc % groupr(k) % xs)
+           xs => inuc % groupr(k) % xs
            threshold = xs % threshold    
            do z=1,SIZE(xs % value)
              if (threshold == 0) then
@@ -705,15 +714,15 @@ contains
              threshold+z-1+shift)) / nr_1
              end if
            end do
-           end associate
+          
          group_tally_results(k,inuc_groupr,i) = running_sum * dens
          end do
-        end associate
+        
        end do
-      end associate
+      
     end do
     !$omp end parallel do
-    end associate
+    
     if (master) then 
      PRINT*, group_tally_results(:,1,1)
     end if

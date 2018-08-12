@@ -693,7 +693,6 @@ contains
        shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
-       PRINT*, mat_id
        mat => materials(mat_id)
        mat_nuclides = mat % n_nuclides
        do j=1,mat_nuclides
@@ -724,7 +723,7 @@ contains
     !$omp end parallel do
     
     if (master) then 
-     PRINT*, group_tally_results(:,1,1)
+     PRINT*, group_tally_results(:,4,1)
     end if
     
    end subroutine collapse

@@ -685,7 +685,7 @@ contains
     t => tallies(2) % obj
     nr_1 = t % n_realizations
     groupr_size = SIZE(t % results(RESULT_SUM,1,:)) / n_fuel
-    !$omp parallel do schedule(static) private(shift,fuel_id,mat_id,&
+    !$omp parallel do schedule(runtime) private(shift,fuel_id,mat_id,&
     !$omp&                                  mat_nuclides,inuc_groupr,dens,inuc_int,threshold,running_sum,&
     !$omp&                                  mat,inuc,xs) shared(group_tally_results,t,groupr_size,nr_1,&
     !$omp&                                  mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr)

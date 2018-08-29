@@ -680,15 +680,18 @@ contains
     type(GrouprNuclide), pointer :: inuc
     type(TallyObject), pointer :: t
     type(GrouprXS), pointer :: xs
+    integer :: t_id
     allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
     group_tally_results(:,:,:) = ZERO
     t => tallies(2) % obj
     nr_1 = t % n_realizations
     groupr_size = SIZE(t % results(RESULT_SUM,1,:)) / n_fuel
+    
     !$omp parallel do schedule(runtime) private(shift,fuel_id,mat_id,&
     !$omp&                                  mat_nuclides,inuc_groupr,dens,inuc_int,threshold,running_sum,&
     !$omp&                                  mat,inuc,xs) shared(group_tally_results,t,groupr_size,nr_1,&
-    !$omp&                                  mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr)
+    !$omp&                                  mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr,t_id)  
+    !$omp&                              collapse(2)
     do i=1,n_fuel
        shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)

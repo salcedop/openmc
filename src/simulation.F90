@@ -631,6 +631,7 @@ contains
 
       n_threads = omp_get_max_threads()
 
+      
 !$omp parallel
       thread_id = omp_get_thread_num()
 

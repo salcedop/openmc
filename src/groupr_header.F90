@@ -1,14 +1,16 @@
 module groupr_header
 
+  use, intrinsic :: ISO_C_BINDING
   use constants,      only: MAX_WORD_LEN
   use hdf5_interface
-
+  use message_passing,     only: n_procs
   implicit none
-
+   
 !===============================================================================
 ! REACTION contains the cross-section and secondary energy and angle
 ! distributions for a single reaction in a continuous-energy ACE-format table
 !===============================================================================
+
 
   type GrouprXS
     integer :: threshold             ! Energy grid index of threshold
@@ -39,5 +41,6 @@ contains
     call read_dataset(this % xs % value, xs)
     call close_dataset(xs)
   end subroutine groupr_from_hdf5
+
 
 end module groupr_header

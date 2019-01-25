@@ -53,7 +53,6 @@ module tally_header
     logical :: active = .false.
     logical :: depletion_rx = .false. ! has depletion reactions, e.g. (n,2n)
     integer, allocatable :: filter(:) ! index in filters array
-
     ! The stride attribute is used for determining the index in the results
     ! array for a matching_bin combination. Since multiple dimensions are
     ! mapped onto one dimension in the results array, the stride attribute gives

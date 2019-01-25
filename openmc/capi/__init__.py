@@ -24,7 +24,7 @@ if sys.platform == 'darwin':
     _suffix = 'dylib'
 else:
     _suffix = 'so'
-
+'''
 if os.environ.get('READTHEDOCS', None) != 'True':
     # Open shared library
     _filename = pkg_resources.resource_filename(
@@ -37,6 +37,10 @@ else:
     # values for symbols, no errors occur
     from unittest.mock import Mock
     _dll = Mock()
+'''
+_dll = CDLL('/home/salcedop/openmc_org/openmc/build_comparing-MG-traditional-rates/lib/libopenmc.so')
+
+#openmc/openmc/capi/libopenmc.so
 
 from .error import *
 from .core import *

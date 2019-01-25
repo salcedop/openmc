@@ -526,7 +526,7 @@ class Operator(TransportOperator):
 
             # Get material results hyperslab
             results = self._tally.results[slab, :, 1]
-
+            results_MG = openmc.capi.MG_rates()
             # Zero out reaction rates and nuclide numbers
             rates_expanded[:] = 0.0
             number[:] = 0.0

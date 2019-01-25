@@ -10,6 +10,7 @@ module openmc_api
   use geometry_header
   use hdf5_interface
   use material_header
+  use crass,   only: openmc_MG_rates
   use math
   use mesh_header
   use message_passing
@@ -96,7 +97,7 @@ module openmc_api
   public :: openmc_tally_set_nuclides
   public :: openmc_tally_set_scores
   public :: openmc_tally_set_type
-
+  public :: openmc_MG_rates
 contains
 
 !===============================================================================

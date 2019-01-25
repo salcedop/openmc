@@ -56,6 +56,15 @@ _dll.openmc_statepoint_write.argtypes = [POINTER(c_char_p)]
 _dll.openmc_statepoint_write.restype = c_int
 _dll.openmc_statepoint_write.errcheck = _error_handler
 
+_dll.openmc_MG_rates.argtypes = [POINTER(POINTER(c_double)), POINTER(c_int*3)]
+_dll.openmc_MG_rates.restype = c_int
+_dll.openmc_MG_rates.errcheck = error_handler
+
+def MG_results():
+    data = POINTER(c_double)()
+    shape = (c_int*3)()
+    _dll.openmc_MG_rates(data, shape)
+    return as_array(data, tuple(shape[::-1]))
 
 def calculate_volumes():
     """Run stochastic volume calculation"""

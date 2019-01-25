@@ -70,7 +70,6 @@ _dll.openmc_tally_set_type.argtypes = [c_int32, c_char_p]
 _dll.openmc_tally_set_type.restype = c_int
 _dll.openmc_tally_set_type.errcheck = _error_handler
 
-
 _SCORES = {
     -1: 'flux', -2: 'total', -3: 'scatter', -4: 'nu-scatter',
     -5: 'absorption', -6: 'fission', -7: 'nu-fission', -8: 'kappa-fission',
@@ -117,7 +116,6 @@ def global_tallies():
 def num_realizations():
     """Number of realizations of global tallies."""
     return c_int32.in_dll(_dll, 'n_realizations').value
-
 
 class Tally(_FortranObjectWithID):
     """Tally stored internally.
@@ -254,6 +252,8 @@ class Tally(_FortranObjectWithID):
         shape = (c_int*3)()
         _dll.openmc_tally_results(self._index, data, shape)
         return as_array(data, tuple(shape[::-1]))
+
+    
 
     @property
     def scores(self):

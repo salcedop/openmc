@@ -10,6 +10,7 @@ module output
   use error,           only: fatal_error, warning
   use geometry_header
   use groupr_header
+  use crass
   use material_header, only: n_fuel,mat_fuel_dict
   use math,            only: t_percentile
   use mesh_header,     only: RegularMesh, meshes
@@ -31,6 +32,7 @@ module output
   use timer_header
 
   implicit none
+
 
   ! Short names for output and error units
   integer :: ou = OUTPUT_UNIT
@@ -672,7 +674,6 @@ contains
     integer :: inuc_groupr
     real(8) :: dens
     real(8) :: running_sum
-    real(8),allocatable :: group_tally_results(:,:,:)
     integer :: fuel_index
     integer :: nr_1
     integer :: groupr_size
@@ -681,6 +682,10 @@ contains
     type(TallyObject), pointer :: t
     type(GrouprXS), pointer :: xs
     integer :: t_id
+    integer :: shapes(3)
+    type(C_PTR) :: ptr
+    integer :: err_f
+
     allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
     group_tally_results(:,:,:) = ZERO
     t => tallies(2) % obj
@@ -691,7 +696,6 @@ contains
     !$omp&                                  mat_nuclides,inuc_groupr,dens,inuc_int,threshold,running_sum,&
     !$omp&                                  mat,inuc,xs) shared(group_tally_results,t,groupr_size,nr_1,&
     !$omp&                                  mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr,t_id)  
-    !$omp&                              collapse(2)
     do i=1,n_fuel
        shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)
@@ -728,8 +732,12 @@ contains
     if (master) then 
      PRINT*, group_tally_results(:,4,1)
     end if
+
     
+   err_f = openmc_MG_rates(ptr, shapes)
+   PRINT*, shapes(1)
    end subroutine collapse
+   
 !===============================================================================
 ! WRITE_TALLIES creates an output file and writes out the mean values of all
 ! tallies and their standard deviations

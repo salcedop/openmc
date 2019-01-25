@@ -109,7 +109,8 @@ extern "C" {
   int openmc_zernike_filter_set_order(int32_t index, int order);
   int openmc_zernike_filter_set_params(int32_t index, const double* x,
                                        const double* y, const double* r);
-
+  int openmc_MG_rates(double** ptr, int shape_[3]);
+  
   // Error codes
   extern int OPENMC_E_UNASSIGNED;
   extern int OPENMC_E_ALLOCATE;

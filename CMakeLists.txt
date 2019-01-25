@@ -379,6 +379,7 @@ set(LIBOPENMC_FORTRAN_SRC
   src/random_lcg.F90
   src/reaction_header.F90
   src/groupr_header.F90
+  src/crass.F90
   src/relaxng
   src/sab_header.F90
   src/scattdata_header.F90

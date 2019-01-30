@@ -41,7 +41,7 @@ module simulation
   use timer_header
   use trigger,         only: check_triggers
   use tracking,        only: transport
-
+  use MG_rates
   implicit none
   private
   public :: openmc_next_batch
@@ -120,6 +120,8 @@ contains
     if (present(status)) then
       if (current_batch == n_max_batches) then
         status = STATUS_EXIT_MAX_BATCH
+        !if (master .and. has_group_flux) call collapse()
+        if (master) call collapse()
       elseif (satisfy_triggers) then
         status = STATUS_EXIT_ON_TRIGGER
       else
@@ -548,7 +550,6 @@ contains
 
     ! Write tally results to tallies.out
     if (output_tallies .and. master) call write_tallies()
-    if (master .and. has_group_flux) call collapse()
     ! Stop timers and show timing statistics
     call time_finalize%stop()
     call time_total%stop()

@@ -35,7 +35,7 @@ module input_xml
                               zero_padded, to_c_string
   use summary,          only: write_summary
   use tally
-  use tally_header,     only: openmc_extend_tallies, has_group_flux
+  use tally_header,     only: openmc_extend_tallies
   use tally_derivative_header
   use tally_filter_header
   use tally_filter
@@ -2301,8 +2301,7 @@ contains
                    &filter.")
             end if
           case('group-flux')
-             t % score_bins(j) = SCORE_FLUX
-             has_group_flux = .true.
+             t % score_bins(j) = SCORE_GROUP_FLUX
           case ('total', '(n,total)')
             t % score_bins(j) = SCORE_TOTAL
             if (t % find_filter(FILTER_ENERGYOUT) > 0) then

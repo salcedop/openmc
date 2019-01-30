@@ -10,7 +10,7 @@ module output
   use error,           only: fatal_error, warning
   use geometry_header
   use groupr_header
-  use crass
+  use MG_rates
   use material_header, only: n_fuel,mat_fuel_dict
   use math,            only: t_percentile
   use mesh_header,     only: RegularMesh, meshes
@@ -734,8 +734,8 @@ contains
     end if
 
     
-   err_f = openmc_MG_rates(ptr, shapes)
-   PRINT*, shapes(1)
+   err_f = openmc_mg_rates(ptr, shapes)
+   !PRINT*, shapes(1)
    end subroutine collapse
    
 !===============================================================================

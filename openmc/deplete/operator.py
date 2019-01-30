@@ -165,8 +165,10 @@ class Operator(TransportOperator):
 
         # Update material compositions and tally nuclides
         self._update_materials()
-        self._tally.nuclides = self._get_tally_nuclides()
-
+        #self._tally.nuclides = self._get_tally_nuclides()
+        
+        self.rr_tally.nuclides = self._get_tally_nuclides()
+        #self._tallies = [self.rr_tally,self.hybrid_tally]
         # Run OpenMC
         openmc.capi.reset()
         openmc.capi.run()
@@ -174,7 +176,7 @@ class Operator(TransportOperator):
         time_openmc = time.time()
 
         # Extract results
-        op_result = self._unpack_tallies_and_normalize(power)
+        op_result = self._unpack_MG_tallies_and_normalize(power)
 
         if comm.rank == 0:
             time_unpack = time.time()
@@ -334,7 +336,7 @@ class Operator(TransportOperator):
         openmc.capi.init(intracomm=comm)
 
         # Generate tallies in memory
-        self._generate_tallies()
+        self._hybrid_tallies()
 
         # Return number density vector
         return list(self.number.get_mat_slice(np.s_[:]))
@@ -443,6 +445,45 @@ class Operator(TransportOperator):
         nuc_list = comm.bcast(nuc_list)
         return [nuc for nuc in nuc_list if nuc in self.chain]
 
+    def _energy_struc(self):
+        bps_matrix = np.matrix([[1.E-5,0.],[1.E+6,101.],[3.E+6,51.],[8.11E+6,551.],[2.E+7,26]])
+        len_matrix = len(bps_matrix)
+        for i in range(1,len_matrix):
+          if (i == 1):
+            group_struc_accumulate = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
+          else:
+            current_struct = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
+            group_struc_accumulate = np.concatenate((group_struc_accumulate,current_struct[1:]),axis=0)
+
+        return (group_struc_accumulate)
+
+
+    def _hybrid_tallies(self):
+        """Generates depletion tallies.
+
+        Using information from the depletion chain as well as the nuclides
+        currently in the problem, this function automatically generates a
+        tally.xml for the simulation.
+
+        """
+        # Create tallies for depleting regions
+        materials = [openmc.capi.materials[int(i)]
+                     for i in self.burnable_mats]
+        mat_filter = openmc.capi.MaterialFilter(materials)
+        energy_filter = openmc.capi.EnergyFilter(self._energy_struc())
+        # Set up a tally that has a material filter covering each depletable
+        # material and scores corresponding to all reactions that cause
+        # transmutation. The nuclides for the tally are set later when eval() is
+        # called.
+        self.rr_tally = openmc.capi.Tally()
+        self.rr_tally.scores = self.chain.reactions
+        self.rr_tally.filters = [mat_filter]
+       
+        self.hybrid_tally = openmc.capi.Tally()
+        self.hybrid_tally.scores = ['flux']
+        self.hybrid_tally.filters =  [mat_filter,energy_filter]
+        
+
     def _generate_tallies(self):
         """Generates depletion tallies.
 
@@ -463,6 +504,107 @@ class Operator(TransportOperator):
         self._tally = openmc.capi.Tally()
         self._tally.scores = self.chain.reactions
         self._tally.filters = [mat_filter]
+
+    def _unpack_MG_tallies_and_normalize(self, power):
+        """Unpack tallies from OpenMC and return an operator result
+
+        This method uses OpenMC's C API bindings to determine the k-effective
+        value and reaction rates from the simulation. The reaction rates are
+        normalized by the user-specified power, summing the product of the
+        fission reaction rate times the fission Q value for each material.
+
+        Parameters
+        ----------
+        power : float
+            Power of the reactor in [W]
+
+        Returns
+        -------
+        openmc.deplete.OperatorResult
+            Eigenvalue and reaction rates resulting from transport operator
+
+        """
+        rates = self.reaction_rates
+        rates[:, :, :] = 0.0
+
+        k_combined = openmc.capi.keff()[0]
+
+        # Extract tally bins
+        materials = self.burnable_mats
+        nuclides = self.rr_tally.nuclides
+
+        # Form fast map
+        nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
+        react_ind = [rates.index_rx[react] for react in self.chain.reactions]
+
+        # Compute fission power
+        # TODO : improve this calculation
+
+        # Keep track of energy produced from all reactions in eV per source
+        # particle
+        energy = 0.0
+
+        # Create arrays to store fission Q values, reaction rates, and nuclide
+        # numbers
+        fission_Q = np.zeros(rates.n_nuc)
+        rates_expanded = np.zeros((rates.n_nuc, rates.n_react))
+        number = np.zeros(rates.n_nuc)
+
+        fission_ind = rates.index_rx["fission"]
+
+        for nuclide in self.chain.nuclides:
+            if nuclide.name in rates.index_nuc:
+                for rx in nuclide.reactions:
+                    if rx.type == 'fission':
+                        ind = rates.index_nuc[nuclide.name]
+                        fission_Q[ind] = rx.Q
+                        break
+
+        # Extract results
+        for i, mat in enumerate(self.local_mats):
+            # Get tally index
+            slab = materials.index(mat)
+
+            
+            # Get material results hyperslab
+            results = self.rr_tally.results[slab, :, 1]
+             
+            # Zero out reaction rates and nuclide numbers
+            rates_expanded[:] = 0.0
+            number[:] = 0.0
+
+            print(nuc_ind)
+            print(react_int)
+            # Expand into our memory layout
+            j = 0
+            for nuc, i_nuc_results in zip(nuclides, nuc_ind):
+                number[i_nuc_results] = self.number[mat, nuc]
+                for react in react_ind:
+                    probando = openmc.capi.MG_results()
+                    print(react)
+                    rates_expanded[i_nuc_results, react] = probando[slab,1,j] #results[j]
+                    j += 1
+
+            # Accumulate energy from fission
+            energy += np.dot(rates_expanded[:, fission_ind], fission_Q)
+            # Divide by total number and store
+            for i_nuc_results in nuc_ind:
+                if number[i_nuc_results] != 0.0:
+                    for react in react_ind:
+                        rates_expanded[i_nuc_results, react] /= number[i_nuc_results]
+
+            rates[i, :, :] = rates_expanded
+
+        # Reduce energy produced from all processes
+        energy = comm.allreduce(energy)
+
+        # Determine power in eV/s
+        power /= JOULE_PER_EV
+
+        # Scale reaction rates to obtain units of reactions/sec
+        rates *= power / energy
+
+        return OperatorResult(k_combined, rates)
 
     def _unpack_tallies_and_normalize(self, power):
         """Unpack tallies from OpenMC and return an operator result

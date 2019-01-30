@@ -115,6 +115,29 @@ contains
       ! Determine appropirate scoring value.
 
       select case(score_bin)
+      
+      case (SCORE_GROUP_FLUX)
+        if (t % estimator == ESTIMATOR_ANALOG) then
+          ! All events score to a flux bin. We actually use a collision
+          ! estimator in place of an analog one since there is no way to count
+          ! 'events' exactly for the flux
+          if (survival_biasing) then
+            ! We need to account for the fact that some weight was already
+            ! absorbed
+            score = p % last_wgt + p % absorb_wgt
+          else
+            score = p % last_wgt
+          end if
+          score = score / material_xs % total * flux
+
+        else
+          ! For flux, we need no cross section
+
+          has_group_flux = .true.
+          score = flux
+        end if
+
+      
 
 
       case (SCORE_FLUX)

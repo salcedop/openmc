@@ -712,12 +712,12 @@ contains
            running_sum = ZERO
            xs => inuc % groupr(k) % xs
            threshold = xs % threshold    
-           do z=1,SIZE(xs % value)
+           do z=threshold,SIZE(xs % value)
              if (threshold == 0) then
              running_sum = ZERO
              else
              running_sum = running_sum + xs % value(z) * (t % results(RESULT_SUM,1,&
-             threshold+z-1+shift)) / nr_1
+             z+shift)) / nr_1
              end if
            end do
           

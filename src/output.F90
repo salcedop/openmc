@@ -685,7 +685,7 @@ contains
     integer :: shapes(3)
     type(C_PTR) :: ptr
     integer :: err_f
-
+    type(Nuclide), pointer :: prueba
     allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
     group_tally_results(:,:,:) = ZERO
     t => tallies(2) % obj
@@ -701,9 +701,13 @@ contains
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
        mat => materials(mat_id)
+       PRINT*, mat % name
        mat_nuclides = mat % n_nuclides
+       PRINT*, mat_nuclides
        do j=1,mat_nuclides
          inuc_int = mat % nuclide(j)
+         prueba => nuclides(inuc_int)
+         PRINT*, prueba % name
          if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
          inuc_groupr = nuclide_dict_groupr % get(inuc_int)
          inuc => nuclides_groupr(inuc_groupr)

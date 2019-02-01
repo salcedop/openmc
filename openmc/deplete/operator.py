@@ -573,15 +573,13 @@ class Operator(TransportOperator):
             rates_expanded[:] = 0.0
             number[:] = 0.0
 
-            print(nuc_ind)
-            print(react_int)
             # Expand into our memory layout
             j = 0
             for nuc, i_nuc_results in zip(nuclides, nuc_ind):
                 number[i_nuc_results] = self.number[mat, nuc]
+                j=0
                 for react in react_ind:
                     probando = openmc.capi.MG_results()
-                    print(react)
                     rates_expanded[i_nuc_results, react] = probando[slab,1,j] #results[j]
                     j += 1
 

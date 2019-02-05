@@ -26,6 +26,8 @@ from .atom_number import AtomNumber
 from .reaction_rates import ReactionRates
 
 
+myrxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)']
+
 def _distribute(items):
     """Distribute items across MPI communicator
 
@@ -134,7 +136,7 @@ class Operator(TransportOperator):
 
         # Create reaction rates array
         self.reaction_rates = ReactionRates(
-            self.local_mats, self._burnable_nucs, self.chain.reactions)
+            self.local_mats, self._burnable_nucs, myrxn)
 
 
     def __call__(self, vec, power, print_out=True):
@@ -157,7 +159,7 @@ class Operator(TransportOperator):
         """
         # Prevent OpenMC from complaining about re-creating tallies
         openmc.reset_auto_ids()
-
+        print(vec)
         # Update status
         self.number.set_density(vec)
 
@@ -380,7 +382,6 @@ class Operator(TransportOperator):
                 # Update densities on C API side
                 mat_internal = openmc.capi.materials[int(mat)]
                 mat_internal.set_densities(nuclides, densities)
-
                 #TODO Update densities on the Python side, otherwise the
                 # summary.h5 file contains densities at the first time step
 
@@ -502,7 +503,7 @@ class Operator(TransportOperator):
         # transmutation. The nuclides for the tally are set later when eval() is
         # called.
         self._tally = openmc.capi.Tally()
-        self._tally.scores = self.chain.reactions
+        self._tally.scores = myrxn #self.chain.reactions
         self._tally.filters = [mat_filter]
 
     def _unpack_MG_tallies_and_normalize(self, power):
@@ -535,7 +536,7 @@ class Operator(TransportOperator):
 
         # Form fast map
         nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
-        react_ind = [rates.index_rx[react] for react in self.chain.reactions]
+        react_ind = [rates.index_rx[react] for react in myrxn]
 
         # Compute fission power
         # TODO : improve this calculation
@@ -549,9 +550,13 @@ class Operator(TransportOperator):
         fission_Q = np.zeros(rates.n_nuc)
         rates_expanded = np.zeros((rates.n_nuc, rates.n_react))
         number = np.zeros(rates.n_nuc)
-
+        
+        
         fission_ind = rates.index_rx["fission"]
-
+        gamma_ind = rates.index_rx["(n,gamma)"]
+        n2n_ind = rates.index_rx["(n,2n)"]
+        exclude_rates = [fission_ind,gamma_ind,n2n_ind]
+        probando = openmc.capi.MG_results()
         for nuclide in self.chain.nuclides:
             if nuclide.name in rates.index_nuc:
                 for rx in nuclide.reactions:
@@ -577,10 +582,13 @@ class Operator(TransportOperator):
             j = 0
             for nuc, i_nuc_results in zip(nuclides, nuc_ind):
                 number[i_nuc_results] = self.number[mat, nuc]
-                j=0
                 for react in react_ind:
-                    probando = openmc.capi.MG_results()
-                    rates_expanded[i_nuc_results, react] = probando[slab,1,j] #results[j]
+                    if (react in exclude_rates):
+                       #print("llegue")
+                       res = results[j]
+                    else:
+                       res = probando[slab,i_nuc_results,react]
+                    rates_expanded[i_nuc_results, react] = res #probando[slab,i_nuc_results,react] #results[j]
                     j += 1
 
             # Accumulate energy from fission
@@ -592,13 +600,15 @@ class Operator(TransportOperator):
                         rates_expanded[i_nuc_results, react] /= number[i_nuc_results]
 
             rates[i, :, :] = rates_expanded
-
+        
         # Reduce energy produced from all processes
         energy = comm.allreduce(energy)
-
+     
+        print(probando[0,0:7,:])
+        print(energy)
         # Determine power in eV/s
         power /= JOULE_PER_EV
-
+        print(power)
         # Scale reaction rates to obtain units of reactions/sec
         rates *= power / energy
 

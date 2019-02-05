@@ -686,7 +686,9 @@ contains
     type(C_PTR) :: ptr
     integer :: err_f
     type(Nuclide), pointer :: prueba
-    allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
+    if (.not. allocated(group_tally_results)) then
+        allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
+    end if
     group_tally_results(:,:,:) = ZERO
     t => tallies(2) % obj
     nr_1 = t % n_realizations
@@ -701,17 +703,16 @@ contains
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
        mat => materials(mat_id)
-       PRINT*, mat % name
        mat_nuclides = mat % n_nuclides
-       PRINT*, mat_nuclides
        do j=1,mat_nuclides
          inuc_int = mat % nuclide(j)
          prueba => nuclides(inuc_int)
          PRINT*, prueba % name
-         if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
-         inuc_groupr = nuclide_dict_groupr % get(inuc_int)
-         inuc => nuclides_groupr(inuc_groupr)
+         !if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
+         !inuc_groupr = nuclide_dict_groupr % get(inuc_int)
+         inuc => nuclides_groupr(j)
          dens = mat % atom_density(j)
+         PRINT*, dens
          do k=1,7
            running_sum = ZERO
            xs => inuc % groupr(k) % xs
@@ -725,7 +726,7 @@ contains
              end if
            end do
           
-         group_tally_results(k,inuc_groupr,i) = running_sum * dens
+         group_tally_results(k,j,i) = running_sum * dens
          end do
         
        end do
@@ -734,7 +735,7 @@ contains
     !$omp end parallel do
     
     if (master) then 
-     PRINT*, group_tally_results(:,4,1)
+     PRINT*, group_tally_results(:,7,1)
     end if
 
     

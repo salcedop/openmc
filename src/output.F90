@@ -712,7 +712,7 @@ contains
          !inuc_groupr = nuclide_dict_groupr % get(inuc_int)
          inuc => nuclides_groupr(j)
          dens = mat % atom_density(j)
-         PRINT*, dens
+         !PRINT*, dens
          do k=1,7
            running_sum = ZERO
            xs => inuc % groupr(k) % xs
@@ -722,11 +722,12 @@ contains
              running_sum = ZERO
              else
              running_sum = running_sum + xs % value(z) * (t % results(RESULT_SUM,1,&
-             z+shift)) / nr_1
+             z+shift)) 
              end if
            end do
           
          group_tally_results(k,j,i) = running_sum * dens
+         PRINT*, running_sum*dens
          end do
         
        end do

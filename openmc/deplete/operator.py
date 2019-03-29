@@ -477,7 +477,7 @@ class Operator(TransportOperator):
         # transmutation. The nuclides for the tally are set later when eval() is
         # called.
         self.rr_tally = openmc.capi.Tally()
-        self.rr_tally.scores = self.chain.reactions
+        self.rr_tally.scores = myrxn
         self.rr_tally.filters = [mat_filter]
        
         self.hybrid_tally = openmc.capi.Tally()
@@ -537,7 +537,7 @@ class Operator(TransportOperator):
         # Form fast map
         nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
         react_ind = [rates.index_rx[react] for react in myrxn]
-
+       
         # Compute fission power
         # TODO : improve this calculation
 
@@ -554,8 +554,8 @@ class Operator(TransportOperator):
         
         fission_ind = rates.index_rx["fission"]
         gamma_ind = rates.index_rx["(n,gamma)"]
-        n2n_ind = rates.index_rx["(n,2n)"]
-        exclude_rates = [fission_ind,gamma_ind,n2n_ind]
+        #n2n_ind = rates.index_rx["(n,2n)"]
+        exclude_rates = []
         probando = openmc.capi.MG_results()
         for nuclide in self.chain.nuclides:
             if nuclide.name in rates.index_nuc:
@@ -564,7 +564,7 @@ class Operator(TransportOperator):
                         ind = rates.index_nuc[nuclide.name]
                         fission_Q[ind] = rx.Q
                         break
-
+        nucs_interest = ['U235','U238','Pu239']
         # Extract results
         for i, mat in enumerate(self.local_mats):
             # Get tally index
@@ -590,6 +590,10 @@ class Operator(TransportOperator):
                        res = probando[slab,i_nuc_results,react]
                     rates_expanded[i_nuc_results, react] = res #probando[slab,i_nuc_results,react] #results[j]
                     j += 1
+                    if (nuc in nucs_interest):
+                      print(nuc)
+                      print(react)
+                      print(rates_expanded[i_nuc_results,react])
 
             # Accumulate energy from fission
             energy += np.dot(rates_expanded[:, fission_ind], fission_Q)
@@ -603,12 +607,9 @@ class Operator(TransportOperator):
         
         # Reduce energy produced from all processes
         energy = comm.allreduce(energy)
-     
-        print(probando[0,0:7,:])
-        print(energy)
+         
         # Determine power in eV/s
         power /= JOULE_PER_EV
-        print(power)
         # Scale reaction rates to obtain units of reactions/sec
         rates *= power / energy
 

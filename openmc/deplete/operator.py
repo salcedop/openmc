@@ -25,8 +25,12 @@ from .abc import TransportOperator, OperatorResult
 from .atom_number import AtomNumber
 from .reaction_rates import ReactionRates
 
-
 myrxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)']
+
+mypeak = [3211400., 3439000., 3441800., 3646400., 3764000., 4050000., 4180000., 415000., 
+          4470000., 4533000., 4600000., 4638000., 4840000., 5050000., 5132000., 5320000.,
+          5374000., 5685000., 5926000., 6080000., 6220000., 6272200., 6410000., 6584000.,
+          6800000., 7200000., 8025000.]
 
 def _distribute(items):
     """Distribute items across MPI communicator
@@ -447,8 +451,23 @@ class Operator(TransportOperator):
         return [nuc for nuc in nuc_list if nuc in self.chain]
 
     def _energy_struc(self):
-        bps_matrix = np.matrix([[1.E-5,0.],[1.E+6,101.],[3.E+6,51.],[8.11E+6,551.],[2.E+7,26]])
+        bps = np.ones(len(mypeak)) * 11.
+
+        bps[0] = 101.
+
+        print(mypeak)
+
+        bps_matrix = np.matrix([[1.E-5,0.],[4.E+4,51.]])
+
+        last_row = [[2.E+7,91.]]
+
+        for irow,row in enumerate(mypeak):
+          new_row = [[row,bps[irow]]]
+          bps_matrix = np.concatenate((bps_matrix,new_row))
+
+        bps_matrix = np.concatenate((bps_matrix,last_row))
         len_matrix = len(bps_matrix)
+
         for i in range(1,len_matrix):
           if (i == 1):
             group_struc_accumulate = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
@@ -555,7 +574,7 @@ class Operator(TransportOperator):
         fission_ind = rates.index_rx["fission"]
         gamma_ind = rates.index_rx["(n,gamma)"]
         #n2n_ind = rates.index_rx["(n,2n)"]
-        exclude_rates = []
+        exclude_rates = [fission_ind,gamma_ind]
         probando = openmc.capi.MG_results()
         for nuclide in self.chain.nuclides:
             if nuclide.name in rates.index_nuc:

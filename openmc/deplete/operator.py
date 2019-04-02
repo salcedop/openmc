@@ -451,6 +451,7 @@ class Operator(TransportOperator):
         return [nuc for nuc in nuc_list if nuc in self.chain]
 
     def _energy_struc(self):
+
         bps = np.ones(len(mypeak)) * 11.
 
         bps[0] = 101.

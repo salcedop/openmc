@@ -658,7 +658,6 @@ contains
 
   end subroutine print_overlap_check
 
-
   subroutine collapse()
 
     integer :: i
@@ -672,47 +671,53 @@ contains
     integer :: threshold
     integer :: inuc_int
     integer :: inuc_groupr
+    integer :: groupr_index
+    integer :: n_nuclide_bins
+    integer :: inuc_global_index
+    integer :: inuc_local_index
     real(8) :: dens
     real(8) :: running_sum
+    character(MAX_WORD_LEN)           :: name_groupr
     integer :: fuel_index
     integer :: nr_1
     integer :: groupr_size
     type(Material), pointer :: mat
     type(GrouprNuclide), pointer :: inuc
     type(TallyObject), pointer :: t
+    type(TallyObject), pointer :: t1
     type(GrouprXS), pointer :: xs
-    integer :: t_id
-    integer :: shapes(3)
-    type(C_PTR) :: ptr
-    integer :: err_f
     type(Nuclide), pointer :: prueba
-    if (.not. allocated(group_tally_results)) then
-        allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
-    end if
-    group_tally_results(:,:,:) = ZERO
+    integer :: t_id
     t => tallies(2) % obj
+    t1 => tallies(1) % obj
     nr_1 = t % n_realizations
     groupr_size = SIZE(t % results(RESULT_SUM,1,:)) / n_fuel
-    
+    n_nuclide_bins = t1 % n_nuclide_bins
+
+    if (.not. allocated(group_tally_results)) then
+      allocate(group_tally_results(7,n_nuclide_bins,n_fuel))
+    end if
+    group_tally_results(:,:,:) = ZERO
     !$omp parallel do schedule(runtime) private(shift,fuel_id,mat_id,&
-    !$omp&                                  mat_nuclides,inuc_groupr,dens,inuc_int,threshold,running_sum,&
-    !$omp&                                  mat,inuc,xs) shared(group_tally_results,t,groupr_size,nr_1,&
-    !$omp&                                  mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr,t_id)  
+    !$omp&                              mat_nuclides,inuc_groupr,dens,inuc_local_index,inuc_global_index,threshold,running_sum,&
+    !$omp&                              mat,inuc,xs) shared(group_tally_results,t,groupr_size,nr_1,&
+    !$omp&                              mat_fuel_dict,materials,material_dict,nuclide_dict_groupr,nuclides_groupr,t_id)  
     do i=1,n_fuel
        shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
        mat => materials(mat_id)
        mat_nuclides = mat % n_nuclides
-       do j=1,mat_nuclides
-         inuc_int = mat % nuclide(j)
-         prueba => nuclides(inuc_int)
+       do j=1,n_nuclide_bins
+         inuc_global_index = t1 % nuclide_bins(j)
+         if (.not. nuclide_dict_groupr % has(inuc_global_index)) cycle
+         groupr_index = nuclide_dict_groupr % get(inuc_global_index)
+         inuc_local_index = mat % mat_nuclide_index(inuc_global_index)
+         if (inuc_local_index == 0) cycle
+         inuc => nuclides_groupr(groupr_index)
+         dens = mat % atom_density(inuc_local_index)
+         prueba => nuclides(inuc_global_index)
          PRINT*, prueba % name
-         !if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
-         !inuc_groupr = nuclide_dict_groupr % get(inuc_int)
-         inuc => nuclides_groupr(j)
-         dens = mat % atom_density(j)
-         !PRINT*, dens
          do k=1,7
            running_sum = ZERO
            xs => inuc % groupr(k) % xs
@@ -722,12 +727,12 @@ contains
              running_sum = ZERO
              else
              running_sum = running_sum + xs % value(z) * (t % results(RESULT_SUM,1,&
-             z+shift)) 
+             z+shift)) / nr_1
              end if
            end do
           
          group_tally_results(k,j,i) = running_sum * dens
-         PRINT*, running_sum*dens
+         PRINT*, running_sum * dens
          end do
         
        end do
@@ -736,13 +741,11 @@ contains
     !$omp end parallel do
     
     if (master) then 
-     PRINT*, group_tally_results(:,7,1)
+     PRINT*, group_tally_results(:,4,1)
     end if
-
     
-   err_f = openmc_mg_rates(ptr, shapes)
-   !PRINT*, shapes(1)
    end subroutine collapse
+
    
 !===============================================================================
 ! WRITE_TALLIES creates an output file and writes out the mean values of all

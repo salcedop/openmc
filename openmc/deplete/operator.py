@@ -163,7 +163,6 @@ class Operator(TransportOperator):
         """
         # Prevent OpenMC from complaining about re-creating tallies
         openmc.reset_auto_ids()
-        print(vec)
         # Update status
         self.number.set_density(vec)
 
@@ -456,8 +455,6 @@ class Operator(TransportOperator):
 
         bps[0] = 101.
 
-        print(mypeak)
-
         bps_matrix = np.matrix([[1.E-5,0.],[4.E+4,51.]])
 
         last_row = [[2.E+7,91.]]
@@ -608,12 +605,14 @@ class Operator(TransportOperator):
                        res = results[j]
                     else:
                        res = probando[slab,i_nuc_results,react]
-                    rates_expanded[i_nuc_results, react] = res #probando[slab,i_nuc_results,react] #results[j]
+                    rates_expanded[i_nuc_results, react] = results[j] #probando[slab,i_nuc_results,react] #results[j]
                     j += 1
                     if (nuc in nucs_interest):
                       print(nuc)
                       print(react)
                       print(rates_expanded[i_nuc_results,react])
+                      print("MG-->MC")
+                      print(results[j])
 
             # Accumulate energy from fission
             energy += np.dot(rates_expanded[:, fission_ind], fission_Q)

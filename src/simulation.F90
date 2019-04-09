@@ -121,7 +121,7 @@ contains
       if (current_batch == n_max_batches) then
         status = STATUS_EXIT_MAX_BATCH
         !if (master .and. has_group_flux) call collapse()
-        if (master) call collapse()
+        !if (master) call collapse()
       elseif (satisfy_triggers) then
         status = STATUS_EXIT_ON_TRIGGER
       else
@@ -498,9 +498,6 @@ contains
     call time_finalize % start()
 
     ! Free up simulation-specific memory
-    do i = 1, n_materials
-      deallocate(materials(i) % mat_nuclide_index)
-    end do
 !$omp parallel
     deallocate(micro_xs, filter_matches)
 !$omp end parallel
@@ -550,6 +547,10 @@ contains
 
     ! Write tally results to tallies.out
     if (output_tallies .and. master) call write_tallies()
+    if (master) call collapse()
+    do i = 1, n_materials
+      deallocate(materials(i) % mat_nuclide_index)
+    end do
     ! Stop timers and show timing statistics
     call time_finalize%stop()
     call time_total%stop()

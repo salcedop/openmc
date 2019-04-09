@@ -139,6 +139,7 @@ class Operator(TransportOperator):
         self._extract_number(self.local_mats, volume, nuclides, self.prev_res)
 
         # Create reaction rates array
+        print("this is burnable_nucs: "+str(len(self._burnable_nucs)))
         self.reaction_rates = ReactionRates(
             self.local_mats, self._burnable_nucs, myrxn)
 
@@ -472,7 +473,7 @@ class Operator(TransportOperator):
           else:
             current_struct = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
             group_struc_accumulate = np.concatenate((group_struc_accumulate,current_struct[1:]),axis=0)
-
+        print("total length of energy structure: "+str(len_matrix))
         return (group_struc_accumulate)
 
 
@@ -553,6 +554,9 @@ class Operator(TransportOperator):
 
         # Form fast map
         nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
+        print("nuc_ind is: "+str(len(nuc_ind)))
+        #if(len(nuc_ind) == 421):
+        #  nuc_ind_save = rates.index_nuc
         react_ind = [rates.index_rx[react] for react in myrxn]
        
         # Compute fission power
@@ -565,6 +569,7 @@ class Operator(TransportOperator):
         # Create arrays to store fission Q values, reaction rates, and nuclide
         # numbers
         fission_Q = np.zeros(rates.n_nuc)
+        print("this is rate_nucs: "+str(rates.n_nuc))
         rates_expanded = np.zeros((rates.n_nuc, rates.n_react))
         number = np.zeros(rates.n_nuc)
         
@@ -586,33 +591,38 @@ class Operator(TransportOperator):
         for i, mat in enumerate(self.local_mats):
             # Get tally index
             slab = materials.index(mat)
-
-            
             # Get material results hyperslab
             results = self.rr_tally.results[slab, :, 1]
-             
             # Zero out reaction rates and nuclide numbers
             rates_expanded[:] = 0.0
             number[:] = 0.0
-
             # Expand into our memory layout
             j = 0
+            counting = -1
             for nuc, i_nuc_results in zip(nuclides, nuc_ind):
+                counting += 1
                 number[i_nuc_results] = self.number[mat, nuc]
                 for react in react_ind:
                     if (react in exclude_rates):
                        #print("llegue")
                        res = results[j]
                     else:
+                       ''' 
+                       if (len(nuclides) != 421):
+                          print("this is len_nuclides: "+str(len(nuclides)))
+                          original_nuc_id = nuc_ind_save[nuc]
+                          res = probando[slab,original_nuc_id,react]
+                       else:
+                       '''
                        res = probando[slab,i_nuc_results,react]
-                    rates_expanded[i_nuc_results, react] = results[j] #probando[slab,i_nuc_results,react] #results[j]
-                    j += 1
+                    rates_expanded[i_nuc_results, react] = res #probando[slab,i_nuc_results,react] #results[j]
                     if (nuc in nucs_interest):
                       print(nuc)
                       print(react)
                       print(rates_expanded[i_nuc_results,react])
                       print("MG-->MC")
                       print(results[j])
+                    j += 1
 
             # Accumulate energy from fission
             energy += np.dot(rates_expanded[:, fission_ind], fission_Q)

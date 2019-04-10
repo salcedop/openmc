@@ -205,6 +205,7 @@ module nuclide_header
   integer :: n_nuclides_groupr
   integer(C_INT), bind(C) :: n_nuclides
   type(DictCharInt) :: nuclide_dict
+  type(DictCharInt) :: depletion_mapping
   type(DictIntInt) :: nuclide_dict_groupr
   ! Cross section caches
   type(NuclideMicroXS), allocatable :: micro_xs(:)  ! Cache for each nuclide

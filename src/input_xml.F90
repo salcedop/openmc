@@ -1471,6 +1471,7 @@ contains
     character(MAX_LINE_LEN) :: filename     ! absolute path to materials.xml
     character(MAX_LINE_LEN) :: temp_str     ! temporary string when reading
     character(MAX_WORD_LEN), allocatable :: sarray(:)
+    character(20) :: inuc_name
     real(8)                 :: val          ! value entered for density
     real(8)                 :: temp_dble    ! temporary double prec. real
     logical                 :: sum_density  ! density is sum of nuclide densities
@@ -1892,28 +1893,13 @@ contains
       ! Add material to dictionary
       call material_dict % set(mat % id, i)
     end do
-    integer :: fuel_id
-    integer :: mat_id
-    integer :: mat_nuclides
-    character(20) :: inuc_name
-    type(Nuclide), pointer :: inuc_
+  
+    
     do ilib = 1,size(libraries_groupr)
-        name_groupr = libraries_groupr(ilib) % str
+        inuc_name = libraries_groupr(ilib) % str
         !if (.not. nuclide_dict % has(to_lower(name_groupr))) cycle     
-        do i=1,n_fuel
-          fuel_id  = mat_fuel_dict % get(i)
-          mat_id = material_dict % get(fuel_id)
-          mat => materials(mat_id)
-          mat_nuclides = mat % n_nuclides
-          do j = 1,mat_nuclides
-             i_nuclide_reg = mat % nuclide(j)
-             inuc_ => nuclides(i_nuclide_reg)
-             inuc_name = inuc_ % name
-             if (inuc_name == name_groupr) then
-                 call nuclide_dict_groupr % set(i_nuclide_reg,ilib)
-             end if
-          end do
-        end do
+        call depletion_mapping % set(to_lower(inuc_name),ilib)
+
     end do
 
     ! Set total number of nuclides and S(a,b) tables

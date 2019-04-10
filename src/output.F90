@@ -23,7 +23,7 @@ module output
   use settings
   use simulation_header
   use surface_header,  only: surfaces
-  use string,          only: to_upper, to_str
+  use string,          only: to_upper, to_str, to_lower
   use tally_header
   use tally_derivative_header
   use tally_filter
@@ -676,7 +676,6 @@ contains
     integer :: n_nuclide_bins
     integer :: inuc_global_index
     integer :: inuc_local_index
-    integer :: inuc_groupr
     real(8) :: dens
     real(8) :: running_sum
     integer :: fuel_index
@@ -693,6 +692,7 @@ contains
     integer :: err_f
     integer :: n_bins
     type(Nuclide), pointer :: prueba
+    character(25) :: nuc_name
     t => tallies(2) % obj
     t1 => tallies(1) % obj
     nr_1 = t % n_realizations
@@ -700,30 +700,31 @@ contains
     groupr_size = SIZE(t % results(RESULT_SUM,1,:)) / n_fuel
     if (allocated(group_tally_results)) deallocate(group_tally_results)
     
+    allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
+    group_tally_results(:,:,:) = ZERO
     do i=1,n_fuel
        shift = (i-1) * groupr_size
        fuel_id  = mat_fuel_dict % get(i)
        mat_id = material_dict % get(fuel_id)
        mat => materials(mat_id)
        mat_nuclides = mat % n_nuclides
-       PRINT*, SIZE(mat % mat_nuclide_index)    
-       PRINT*, SIZE(mat % nuclide)
-       PRINT*, n_nuclides_groupr!
-       allocate(group_tally_results(7,n_nuclides_groupr,n_fuel))
-       group_tally_results(:,:,:) = ZERO
+       !PRINT*, SIZE(mat % mat_nuclide_index)    
+       !PRINT*, SIZE(mat % nuclide)
+       !PRINT*, n_nuclides_groupr
        do j=1,n_bins
          inuc_global_index = t1 % nuclide_bins(j)
          !inuc_int = mat % nuclide(j)
          
          !PRINT*, inuc_int
-         !prueba => nuclides(inuc_int)
-         !PRINT*, prueba % name
+         prueba => nuclides(inuc_global_index)
+         nuc_name = prueba % name
+         PRINT*, nuc_name
          !if (.not. nuclide_dict_groupr % has(inuc_int) ) cycle
          !inuc_groupr = nuclide_dict_groupr % get(inuc_int)
          !inuc => nuclides_groupr(j)
          !dens = mat % atom_density(j)
          !PRINT*, dens
-         groupr_index = nuclide_dict_groupr % get(inuc_global_index)
+         groupr_index = depletion_mapping % get(to_lower(nuc_name))
          inuc_local_index = mat % mat_nuclide_index(inuc_global_index)
          if (inuc_local_index == 0) cycle
          inuc => nuclides_groupr(groupr_index)
@@ -741,8 +742,8 @@ contains
              end if
            end do
           
-         group_tally_results(k,inuc_global_index,i) = running_sum * dens
-         !PRINT*, running_sum*dens
+         group_tally_results(k,groupr_index,i) = running_sum * dens
+         PRINT*, running_sum*dens
          end do
         
        end do

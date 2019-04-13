@@ -454,11 +454,11 @@ class Operator(TransportOperator):
 
         bps = np.ones(len(mypeak)) * 11.
 
-        bps[0] = 101.
+        bps[0] = 11.
 
-        bps_matrix = np.matrix([[1.E-5,0.],[4.E+4,51.]])
+        bps_matrix = np.matrix([[1.E-5,0.],[4.E+4,11.]])
 
-        last_row = [[2.E+7,91.]]
+        last_row = [[2.E+7,21.]]
 
         for irow,row in enumerate(mypeak):
           new_row = [[row,bps[irow]]]
@@ -615,13 +615,13 @@ class Operator(TransportOperator):
                        else:
                        '''
                        res = probando[slab,i_nuc_results,react]
-                    rates_expanded[i_nuc_results, react] = res #probando[slab,i_nuc_results,react] #results[j]
-                    if (nuc in nucs_interest):
-                      print(nuc)
-                      print(react)
-                      print(rates_expanded[i_nuc_results,react])
-                      print("MG-->MC")
-                      print(results[j])
+                    rates_expanded[i_nuc_results, react] = results[j]  #probando[slab,i_nuc_results,react] #results[j]
+                    #if (nuc in nucs_interest):
+                    print(nuc)
+                    print(react)
+                    print(rates_expanded[i_nuc_results,react])
+                    print("MG-->MC")
+                    print(results[j])
                     j += 1
 
             # Accumulate energy from fission

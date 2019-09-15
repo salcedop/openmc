@@ -38,7 +38,11 @@ else:
     from unittest.mock import Mock
     _dll = Mock()
 '''
-_dll = CDLL('/home/salcedop/openmc_org/openmc/build_comparing-MG-traditional-rates/lib/libopenmc.so')
+_dll = CDLL('/home/salcedop/openmc_org/openmc/build_adding-flux-tallies/lib/libopenmc.so')
+
+#'/home/salcedop/openmc_org/openmc/openmc/capi/libopenmc.so')
+
+#'/home/salcedop/openmc_org/openmc/build_adding-flux-tallies/lib/libopenmc.so')
 
 #openmc/openmc/capi/libopenmc.so
 

@@ -547,7 +547,9 @@ contains
 
     ! Write tally results to tallies.out
     if (output_tallies .and. master) call write_tallies()
-    if (master) call collapse()
+    PRINT*, has_group_flux
+    if (master .and. has_group_flux) call collapse()
+    
     do i = 1, n_materials
       deallocate(materials(i) % mat_nuclide_index)
     end do

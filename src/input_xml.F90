@@ -2272,7 +2272,8 @@ contains
 
         end do
         n_scores = n_words
-
+        PRINT*, "HEHEHEHEHEHE"
+        PRINT*, n_scores
         ! Allocate score storage accordingly
         allocate(t % score_bins(n_scores))
 
@@ -2303,7 +2304,7 @@ contains
                    &filter.")
             end if
           case('group-flux')
-             t % score_bins(j) = SCORE_GROUP_FLUX
+              t % score_bins(j) = SCORE_GROUP_FLUX
           case ('total', '(n,total)')
             t % score_bins(j) = SCORE_TOTAL
             if (t % find_filter(FILTER_ENERGYOUT) > 0) then

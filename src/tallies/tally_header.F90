@@ -757,9 +757,11 @@ contains
     character(C_CHAR), pointer :: string(:)
     character(len=:, kind=C_CHAR), allocatable :: score_
     logical :: depletion_rx
-
+    logical :: has_group_flux
+    
     err = E_UNASSIGNED
     depletion_rx = .false.
+    has_group_flux = .false.
     if (index >= 1 .and. index <= size(tallies)) then
       associate (t => tallies(index) % obj)
         if (allocated(t % score_bins)) deallocate(t % score_bins)
@@ -772,6 +774,9 @@ contains
           score_ = to_lower(to_f_string(string))
 
           select case (score_)
+          case ('group-flux')
+            t % score_bins(i) = SCORE_GROUP_FLUX
+            has_group_flux = .true.
           case ('flux')
             t % score_bins(i) = SCORE_FLUX
           case ('total', '(n,total)')

@@ -24,8 +24,15 @@ from . import comm
 from .abc import TransportOperator, OperatorResult
 from .atom_number import AtomNumber
 from .reaction_rates import ReactionRates
-
-myrxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)']
+#Needs to be updated... The order of depletion reaction rate strings
+#has to match the one in the MG data. In the previous version, the scores 
+#in the tallies was set equal to 'self.chain.reactions' but the 
+#reaction rate string order was the following: '(n,
+depletion_rxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)']
+#from 3-8MeV, O16's (n,alpha) cross-section has multiple resonances.
+#To reduce the error of its (n,alpha) MG rate, the 500 group structure
+#take the 26 peaks of the cross-sections into account to add more groups
+#around those and hence improve the accuracy.
 
 mypeak = [3211400., 3439000., 3441800., 3646400., 3764000., 4050000., 4180000., 415000., 
           4470000., 4533000., 4600000., 4638000., 4840000., 5050000., 5132000., 5320000.,
@@ -108,11 +115,12 @@ class Operator(TransportOperator):
         Results from a previous depletion calculation
 
     """
-    def __init__(self, geometry, settings, chain_file=None, prev_results=None):
+    def __init__(self, geometry, settings, chain_file=None, MG_collapse=False,prev_results=None):
         super().__init__(chain_file)
         self.round_number = False
         self.settings = settings
         self.geometry = geometry
+        self.MG_collapse = MG_collapse
 
         if prev_results != None:
             # Reload volumes into geometry
@@ -141,7 +149,7 @@ class Operator(TransportOperator):
         # Create reaction rates array
         print("this is burnable_nucs: "+str(len(self._burnable_nucs)))
         self.reaction_rates = ReactionRates(
-            self.local_mats, self._burnable_nucs, myrxn)
+            self.local_mats, self._burnable_nucs, depletion_rxn)
 
 
     def __call__(self, vec, power, print_out=True):
@@ -174,6 +182,7 @@ class Operator(TransportOperator):
         #self._tally.nuclides = self._get_tally_nuclides()
         
         self.rr_tally.nuclides = self._get_tally_nuclides()
+        
         #self._tallies = [self.rr_tally,self.hybrid_tally]
         # Run OpenMC
         openmc.capi.reset()
@@ -342,7 +351,10 @@ class Operator(TransportOperator):
         openmc.capi.init(intracomm=comm)
 
         # Generate tallies in memory
-        self._hybrid_tallies()
+        if (self.MG_collapse == True):
+            self._hybrid_tallies()
+        else:
+            self._generate_tallies()
 
         # Return number density vector
         return list(self.number.get_mat_slice(np.s_[:]))
@@ -473,7 +485,7 @@ class Operator(TransportOperator):
           else:
             current_struct = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
             group_struc_accumulate = np.concatenate((group_struc_accumulate,current_struct[1:]),axis=0)
-        print("total length of energy structure: "+str(len_matrix))
+        #print("total length of energy structure: "+str(len_matrix))
         return (group_struc_accumulate)
 
 
@@ -495,11 +507,11 @@ class Operator(TransportOperator):
         # transmutation. The nuclides for the tally are set later when eval() is
         # called.
         self.rr_tally = openmc.capi.Tally()
-        self.rr_tally.scores = myrxn
+        self.rr_tally.scores = depletion_rxn
         self.rr_tally.filters = [mat_filter]
        
         self.hybrid_tally = openmc.capi.Tally()
-        self.hybrid_tally.scores = ['flux']
+        self.hybrid_tally.scores = ['group-flux']
         self.hybrid_tally.filters =  [mat_filter,energy_filter]
         
 
@@ -520,10 +532,11 @@ class Operator(TransportOperator):
         # material and scores corresponding to all reactions that cause
         # transmutation. The nuclides for the tally are set later when eval() is
         # called.
-        self._tally = openmc.capi.Tally()
-        self._tally.scores = myrxn #self.chain.reactions
-        self._tally.filters = [mat_filter]
-
+        self.rr_tally = openmc.capi.Tally()
+        #need to make sure `self.chain.reactions` matches the order
+        #of the depletion reaction rate strings in the multigroup data.
+        self.rr_tally.scores = depletion_rxn#self.chain.reactions #depletion_rxn
+        self.rr_tally.filters = [mat_filter]
     def _unpack_MG_tallies_and_normalize(self, power):
         """Unpack tallies from OpenMC and return an operator result
 
@@ -557,8 +570,8 @@ class Operator(TransportOperator):
         print("nuc_ind is: "+str(len(nuc_ind)))
         #if(len(nuc_ind) == 421):
         #  nuc_ind_save = rates.index_nuc
-        react_ind = [rates.index_rx[react] for react in myrxn]
-       
+        react_ind = [rates.index_rx[react] for react in depletion_rxn]
+      
         # Compute fission power
         # TODO : improve this calculation
 
@@ -569,16 +582,20 @@ class Operator(TransportOperator):
         # Create arrays to store fission Q values, reaction rates, and nuclide
         # numbers
         fission_Q = np.zeros(rates.n_nuc)
-        print("this is rate_nucs: "+str(rates.n_nuc))
         rates_expanded = np.zeros((rates.n_nuc, rates.n_react))
         number = np.zeros(rates.n_nuc)
-        
-        
+        #if we are using MG-rates, this block will
+        #(1) ensure that we exclude the fission and capture 
+        #rates and pick only the 'threshofd rates' and
+        #(2) save all the MG-rates coming from the C++ side
+        #into 'MG_results'. 
+        #fission_ind is left out of 'if statement' because it will
+        #used later on to compute the energy  
         fission_ind = rates.index_rx["fission"]
-        gamma_ind = rates.index_rx["(n,gamma)"]
-        #n2n_ind = rates.index_rx["(n,2n)"]
-        exclude_rates = [fission_ind,gamma_ind]
-        probando = openmc.capi.MG_results()
+        if (self.MG_collapse == True):
+          gamma_ind = rates.index_rx["(n,gamma)"]
+          exclude_rates = [fission_ind,gamma_ind]
+          MG_results = openmc.capi.MG_results()
         for nuclide in self.chain.nuclides:
             if nuclide.name in rates.index_nuc:
                 for rx in nuclide.reactions:
@@ -598,25 +615,22 @@ class Operator(TransportOperator):
             number[:] = 0.0
             # Expand into our memory layout
             j = 0
-            counting = -1
             for nuc, i_nuc_results in zip(nuclides, nuc_ind):
-                counting += 1
                 number[i_nuc_results] = self.number[mat, nuc]
                 for react in react_ind:
-                    if (react in exclude_rates):
-                       #print("llegue")
-                       res = results[j]
+                    #check if we are collapsing cross-sections
+                    #and then make sure to only pick exclude
+                    #the fission and capture MG-rates.
+                    if (self.MG_collapse == True):
+                        if (react in exclude_rates):
+                           #print("llegue")
+                           res = results[j]
+                        else:
+                           res = MG_results[slab,i_nuc_results,react]
+                        rates_expanded[i_nuc_results, react] = res
                     else:
-                       ''' 
-                       if (len(nuclides) != 421):
-                          print("this is len_nuclides: "+str(len(nuclides)))
-                          original_nuc_id = nuc_ind_save[nuc]
-                          res = probando[slab,original_nuc_id,react]
-                       else:
-                       '''
-                       res = probando[slab,i_nuc_results,react]
-                    rates_expanded[i_nuc_results, react] = results[j]  #probando[slab,i_nuc_results,react] #results[j]
-                    #if (nuc in nucs_interest):
+                        rates_expanded[i_nuc_results, react] = results[j]
+                    
                     print(nuc)
                     print(react)
                     print(rates_expanded[i_nuc_results,react])

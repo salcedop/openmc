@@ -107,7 +107,6 @@ contains
 
       ! determine what type of score bin
       score_bin = t % score_bins(i)
-
       ! determine scoring bin index
       score_index = start_index + i
 
@@ -136,9 +135,6 @@ contains
           has_group_flux = .true.
           score = flux
         end if
-
-      
-
 
       case (SCORE_FLUX)
         if (t % estimator == ESTIMATOR_ANALOG) then

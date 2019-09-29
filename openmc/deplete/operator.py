@@ -34,10 +34,6 @@ depletion_rxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)
 #take the 26 peaks of the cross-sections into account to add more groups
 #around those and hence improve the accuracy.
 
-mypeak = [3211400., 3439000., 3441800., 3646400., 3764000., 4050000., 4180000., 415000., 
-          4470000., 4533000., 4600000., 4638000., 4840000., 5050000., 5132000., 5320000.,
-          5374000., 5685000., 5926000., 6080000., 6220000., 6272200., 6410000., 6584000.,
-          6800000., 7200000., 8025000.]
 
 def _distribute(items):
     """Distribute items across MPI communicator
@@ -115,12 +111,13 @@ class Operator(TransportOperator):
         Results from a previous depletion calculation
 
     """
-    def __init__(self, geometry, settings, chain_file=None, MG_collapse=False,prev_results=None):
+    def __init__(self, geometry, settings, chain_file=None, MG_collapse=False,Energy_Struc=None,prev_results=None):
         super().__init__(chain_file)
         self.round_number = False
         self.settings = settings
         self.geometry = geometry
         self.MG_collapse = MG_collapse
+        self.Energy_Struc = Energy_Struc
 
         if prev_results != None:
             # Reload volumes into geometry
@@ -352,6 +349,10 @@ class Operator(TransportOperator):
 
         # Generate tallies in memory
         if (self.MG_collapse == True):
+            #check if user provided energy structure
+            if (self.Energy_Struc == None):
+                raise RuntimeError("Energy structure was not provided, " 
+                                   "hybrid tallies will not be carried out!")
             self._hybrid_tallies()
         else:
             self._generate_tallies()
@@ -461,34 +462,7 @@ class Operator(TransportOperator):
         # Store list of tally nuclides on each process
         nuc_list = comm.bcast(nuc_list)
         return [nuc for nuc in nuc_list if nuc in self.chain]
-
-    def _energy_struc(self):
-
-        bps = np.ones(len(mypeak)) * 11.
-
-        bps[0] = 11.
-
-        bps_matrix = np.matrix([[1.E-5,0.],[4.E+4,11.]])
-
-        last_row = [[2.E+7,21.]]
-
-        for irow,row in enumerate(mypeak):
-          new_row = [[row,bps[irow]]]
-          bps_matrix = np.concatenate((bps_matrix,new_row))
-
-        bps_matrix = np.concatenate((bps_matrix,last_row))
-        len_matrix = len(bps_matrix)
-
-        for i in range(1,len_matrix):
-          if (i == 1):
-            group_struc_accumulate = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
-          else:
-            current_struct = np.logspace(np.log10(bps_matrix[i-1,0]),np.log10(bps_matrix[i,0]),int(bps_matrix[i,1]))
-            group_struc_accumulate = np.concatenate((group_struc_accumulate,current_struct[1:]),axis=0)
-        #print("total length of energy structure: "+str(len_matrix))
-        return (group_struc_accumulate)
-
-
+    
     def _hybrid_tallies(self):
         """Generates depletion tallies.
 
@@ -501,7 +475,7 @@ class Operator(TransportOperator):
         materials = [openmc.capi.materials[int(i)]
                      for i in self.burnable_mats]
         mat_filter = openmc.capi.MaterialFilter(materials)
-        energy_filter = openmc.capi.EnergyFilter(self._energy_struc())
+        energy_filter = openmc.capi.EnergyFilter(self.Energy_Struc)
         # Set up a tally that has a material filter covering each depletable
         # material and scores corresponding to all reactions that cause
         # transmutation. The nuclides for the tally are set later when eval() is

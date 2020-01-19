@@ -86,6 +86,7 @@ int openmc_simulation_init()
   simulation::k_generation.clear();
   simulation::entropy.clear();
   simulation::need_depletion_rx = false;
+  simulation::need_flux_tallies = false;
   openmc_reset();
 
   // If this is a restart run, load the state point data and binary source
@@ -136,6 +137,7 @@ int openmc_simulation_finalize()
 #endif
 
   // Write tally results to tallies.out
+  if (settings::hybrid && mpi::master) collapse();
   if (settings::output_tallies && mpi::master) write_tallies();
 
   #pragma omp parallel
@@ -159,6 +161,7 @@ int openmc_simulation_finalize()
 
   // Reset flags
   simulation::need_depletion_rx = false;
+  simulation::need_flux_tallies = false;
   simulation::initialized = false;
   return 0;
 }
@@ -251,6 +254,7 @@ double k_abs_tra {0.0};
 double log_spacing;
 int n_lost_particles {0};
 bool need_depletion_rx {false};
+bool need_flux_tallies {false};
 int restart_batch;
 bool satisfy_triggers {false};
 int total_gen {0};

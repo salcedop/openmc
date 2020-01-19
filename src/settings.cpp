@@ -50,6 +50,7 @@ bool output_summary          {true};
 bool output_tallies          {true};
 bool particle_restart_run    {false};
 bool photon_transport        {false};
+bool hybrid_flux             {false};
 bool reduce_tallies          {true};
 bool res_scat_on             {false};
 bool restart_run             {false};
@@ -67,6 +68,7 @@ bool write_all_tracks        {false};
 bool write_initial_source    {false};
 
 std::string path_cross_sections;
+std::string path_cross_sections_hybrid;
 std::string path_input;
 std::string path_output;
 std::string path_particle_restart;
@@ -75,6 +77,7 @@ std::string path_sourcepoint;
 std::string path_statepoint;
 
 int32_t n_batches;
+int32_t n_fuel {-1};
 int32_t n_inactive {0};
 int32_t gen_per_batch {1};
 int64_t n_particles {-1};
@@ -368,6 +371,11 @@ void read_settings_xml()
       fatal_error("Photon transport is not currently supported in "
         "multigroup mode");
     }
+  }
+
+  // Check for hybrid tallies
+  if (check_for_node(root, "hybrid_tally")) {
+    hybrid_tally = get_node_value_bool(root, "hybrid_tally");
   }
 
   // Number of bins for logarithmic grid

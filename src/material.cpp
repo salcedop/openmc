@@ -39,6 +39,7 @@ namespace model {
 
 std::vector<std::unique_ptr<Material>> materials;
 std::unordered_map<int32_t, int32_t> material_map;
+std::unordered_map<int32_t, int32_t> fuel_map;
 
 } // namespace model
 
@@ -61,6 +62,9 @@ Material::Material(pugi::xml_node node)
 
   if (check_for_node(node, "depletable")) {
     depletable_ = get_node_value_bool(node, "depletable");
+    n_fuel += 1;
+    model::fuel_map[n_fuel] = id_;
+    std::cout << "num fuels: "<< n_fuel;
   }
 
   bool sum_density {false};
@@ -1220,6 +1224,7 @@ void free_memory_material()
 {
   model::materials.clear();
   model::material_map.clear();
+  model::fuel_map.clear();
 }
 
 //==============================================================================

@@ -17,7 +17,7 @@ class Library {
 public:
   // Types, enums
   enum class Type {
-    neutron = 1, photon = 3, thermal = 2, multigroup = 4, wmp = 5
+    neutron = 1, photon = 3, thermal = 2, multigroup = 4, wmp = 5, hybrid = 7
   };
 
   // Constructors

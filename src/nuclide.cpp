@@ -511,7 +511,6 @@ void Nuclide::calculate_xs(int i_sab, int i_log_union, double sab_frac, Particle
   micro.thermal = 0.0;
   micro.thermal_elastic = 0.0;
 
-  // Check to see if there is multipole data present at this energy
   bool use_mp = false;
   if (multipole_) {
     use_mp = (p.E_ >= multipole_->E_min_ && p.E_ <= multipole_->E_max_);

@@ -108,7 +108,7 @@ public:
   int delayedgroup_filter_ {C_NONE};
 
   bool depletion_rx_ {false}; //!< Has depletion reactions (e.g. (n,2n))
-
+  bool flux_tallies_ {false};// !< Has a flux tally
   std::vector<Trigger> triggers_;
 
   int deriv_ {C_NONE}; //!< Index of a TallyDerivative object for diff tallies.

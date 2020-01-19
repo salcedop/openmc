@@ -521,6 +521,53 @@ void print_runtime()
 
 //==============================================================================
 
+void collapse(){
+  int stride_results;
+  int n_nuclide_bins;
+  int threshold;
+  const auto& flux_tally {*model::tallies[0]};
+  const auto& reaction_rate_tally {*model::tallies[1]};
+  // second dimension corresponds to total number of nuclides in long-depletion chain.
+  // there are actually 422 ut Be7 was removed from both the 'chain.xml' and 'cross_sections_hybrid.xml'
+  // files.
+  xt::xtensor<double, 3> hybrid_tallies;
+  n_nuclide_bins = reaction_rate_tally.nuclides_.size();
+
+  for (int i=0 ; i < n_fuel ; ++i){
+    //since we are tallying 7 reaction rates for each nuclide
+    //we need 
+    stride_results = i * 421;
+    mat_id = model::fuel_map.find(i); 
+    auto mat = model::materials[mat_id];
+    //pointer to material array.
+    //
+    //determine in:w    
+    for (int j=0; j < n_nuclide_bins; ++j){
+      //inuc_global_index = t1 % nuclide_bins(j);
+      inuc_global_index = reaction_rate_tally.nuclides_[j];
+      auto inuc = data::nuclides[inuc_global_index];
+      inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
+      density = mat->atom_density[inuc_local_index];
+      for (int k=0; k < 7; ++k){
+        running_sum = ZERO;
+        auto xs = inuc->hybrid->HybridReaction[k]->xs;
+        threshold = xs.threshold;
+        for (int z =  threshold; z < xs.size(); ++z){
+          if (threshold == 0){
+            //running_sum = ZERO;
+            break;
+          }
+          else {
+            running_sum = running_sum + xs.value(z) + flux_tally[z-1+stride_results,0,0];
+          }
+        }
+          hybrid_tally[i,j,k] = running_sum * density;
+       }
+     }
+    }        
+}
+//==============================================================================
+
 std::pair<double, double>
 mean_stdev(const double* x, int n)
 {

@@ -89,6 +89,8 @@ std::string reaction_name(int mt)
 {
   if (mt == SCORE_FLUX) {
     return "flux";
+  } else if (mt == GROUP_FLUX) {
+    return "group-flux";
   } else if (mt == SCORE_TOTAL) {
     return "total";
   } else if (mt == SCORE_SCATTER) {

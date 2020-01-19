@@ -53,6 +53,7 @@ extern bool write_initial_source;     //!< write out initial source file?
 
 // Paths to various files
 extern std::string path_cross_sections;   //!< path to cross_sections.xml
+extern std::string path_cross_sections_hybrid;   //!< path to cross_sections_hybrid.xml
 extern std::string path_input;            //!< directory where main .xml files resides
 extern std::string path_output;           //!< directory where output files are written
 extern std::string path_particle_restart; //!< path to a particle restart file
@@ -64,7 +65,7 @@ extern "C" int32_t n_batches;      //!< number of (inactive+active) batches
 extern "C" int32_t n_inactive;     //!< number of inactive batches
 extern "C" int32_t gen_per_batch;  //!< number of generations per batch
 extern "C" int64_t n_particles;    //!< number of particles per generation
-
+extern "C" int64_t n_fuel;         //number of depletable materials
 extern int electron_treatment;       //!< how to treat secondary electrons
 extern std::array<double, 4> energy_cutoff;  //!< Energy cutoff in [eV] for each particle type
 extern int legendre_to_tabular_points; //!< number of points to convert Legendres

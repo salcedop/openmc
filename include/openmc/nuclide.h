@@ -14,6 +14,8 @@
 #include "openmc/constants.h"
 #include "openmc/endf.h"
 #include "openmc/particle.h"
+#include "openmc/groupr_reaction.h"
+#include "openmc/hybrid.h"
 #include "openmc/reaction.h"
 #include "openmc/reaction_product.h"
 #include "openmc/urr.h"
@@ -33,6 +35,7 @@ public:
     std::vector<int> grid_index;
     std::vector<double> energy;
   };
+
 
   // Constructors
   Nuclide(hid_t group, const std::vector<double>& temperature, int i_nuclide);
@@ -71,6 +74,9 @@ public:
 
   // Multipole data
   std::unique_ptr<WindowedMultipole> multipole_;
+  
+// Multipole data
+  std::unique_ptr<hybrid> hybrid_;
 
   // Fission data
   bool fissionable_ {false}; //!< Whether nuclide is fissionable

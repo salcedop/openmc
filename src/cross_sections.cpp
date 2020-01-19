@@ -19,7 +19,7 @@
 #include "openmc/thermal.h"
 #include "openmc/xml_interface.h"
 #include "openmc/wmp.h"
-
+#include "openmc/hybrid.h"
 #include "pugixml.hpp"
 
 #include <cstdlib> // for getenv
@@ -55,6 +55,8 @@ Library::Library(pugi::xml_node node, const std::string& directory)
       type_ = Type::photon;
     } else if (type == "wmp") {
       type_ = Type::wmp;
+    } else if (type == "hybrid") {
+      type_ = Type::hybrid;
     } else {
       fatal_error("Unrecognized library type: " + type);
     }
@@ -135,6 +137,18 @@ void read_cross_sections_xml()
           "information on how to set up data libraries.");
       }
       settings::path_cross_sections = envvar;
+      if (setting::hybrid){
+            
+        char* hybrid_envvar = std::getenv("OPENMC_HYBRID_CROSS_SECTIONS");
+        if (!hybrid_envvar) {
+          fatal_error("No cross_sections.xml file was specified in "
+          "materials.xml or in the OPENMC_HYBRID_CROSS_SECTIONS"
+          " environment variable. OpenMC needs such a file to identify "
+          "where to find data libraries to do flux tallies. Please consult the"
+          " user's guide at https://openmc.readthedocs.io for "
+          "information on how to set up data libraries.");
+        }
+        settings::path_cross_sections_hybrid = hybrid_envvar;
     } else {
       char* envvar = std::getenv("OPENMC_MG_CROSS_SECTIONS");
       if (!envvar) {
@@ -154,6 +168,9 @@ void read_cross_sections_xml()
   // Now that the cross_sections.xml or mgxs.h5 has been located, read it in
   if (settings::run_CE) {
     read_ce_cross_sections_xml();
+    if (setttings::hybrid){
+    read_hybrid_cross_sections_xml()
+    }
   } else {
     read_mg_cross_sections_header();
   }
@@ -278,6 +295,7 @@ read_ce_cross_sections(const std::vector<std::vector<double>>& nuc_temps,
 
       // Read multipole file into the appropriate entry on the nuclides array
       if (settings::temperature_multipole) read_multipole_data(i_nuclide);
+      if (settings::hybrid) read_hybrid_data(i_nuclide);
     }
   }
 
@@ -377,6 +395,51 @@ read_ce_cross_sections(const std::vector<std::vector<double>>& nuc_temps,
         "libraries were found. Make sure that windowed multipole data is "
         "present in your cross_sections.xml file.");
     }
+  }
+}
+
+void read_hybrid_cross_sections_xml()
+{
+  // Check if cross_sections.xml exists
+  const auto& filename_hyrbid = settings::path_cross_sections_hybrid;
+  if (!file_exists(filename_hybrid)) {
+    // Could not find cross_sections.xml file
+    fatal_error("Hybrid Cross sections XML file '" + filename +
+      "' does not exist.");
+  }
+
+  write_message("Reading hybrid cross sections XML file...", 5);
+
+  // Parse cross_sections.xml file
+  pugi::xml_document doc_hybrid;
+  auto result = doc_hybrid.load_file(filename_hybrid.c_str());
+  if (!result) {
+    fatal_error("Error processing cross_sections_hybrid.xml file.");
+  }
+  auto root = doc_hybrid.document_element();
+
+  std::string directory_hybrid;
+  if (check_for_node(root, "directory")) {
+    // Copy directory information if present
+    directory_hybrid = get_node_value(root, "directory");
+  } else {
+    // If no directory is listed in cross_sections.xml, by default select the
+    // directory in which the cross_sections.xml file resides
+    auto pos = filename_hybrid.rfind("/");
+    if (pos == std::string::npos) {
+      // no '/' found, probably a Windows directory
+      pos = filename_hybrid.rfind("\\");
+    }
+    directory_hybrid = filename_hybrid.substr(0, pos);
+  }
+
+  for (const auto& node_library : root.children("library")) {
+    data::libraries.emplace_back(node_library, directory_hybrid);
+  }
+
+  // Make sure file was not empty
+  if (data::libraries.empty()) {
+    fatal_error("No cross section libraries present in cross_sections_hybrid.xml file.");
   }
 }
 

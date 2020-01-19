@@ -34,6 +34,7 @@ extern "C" double k_abs_tra;     //!< sum over batches of k_absorption * k_track
 extern double log_spacing;       //!< lethargy spacing for energy grid searches
 extern "C" int n_lost_particles; //!< cumulative number of lost particles
 extern "C" bool need_depletion_rx; //!< need to calculate depletion rx?
+extern "C" bool need_flux_tallies; //!< need to do flux tallies.
 extern "C" int restart_batch;   //!< batch at which a restart job resumed
 extern "C" bool satisfy_triggers; //!< have tally triggers been satisfied?
 extern "C" int total_gen;        //!< total number of generations simulated

@@ -26,6 +26,7 @@ namespace model {
 
 extern std::vector<std::unique_ptr<Material>> materials;
 extern std::unordered_map<int32_t, int32_t> material_map;
+extern std::unordered_map<int32_t, int32_t> fuel_map;
 
 } // namespace model
 

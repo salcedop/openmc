@@ -56,6 +56,8 @@ void print_runtime();
 //! Display results for global tallies including k-effective estimators
 void print_results();
 
+void collapse();
+
 void write_tallies();
 
 } // namespace openmc

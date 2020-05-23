@@ -1,31 +1,34 @@
-#include "openmc/hybrid_reaction.h"
 #include "openmc/hybrid.h"
+
+
 #include <string>
 #include <utility> // for move
+#include "openmc/hybrid_reaction.h"
 
 #include "openmc/constants.h"
 #include "openmc/hdf5_interface.h"
 #include "openmc/endf.h"
-
+#include "openmc/nuclide.h"
+#include "openmc/cross_sections.h"
 namespace openmc {
 
 //==============================================================================
 //Groupr Reaction implementation
 //==============================================================================
 
-hybrid::hybrid(hid_t group): 
+hybrid::hybrid(hid_t group) 
 {
    // Read reactions
    // Need them in this order to match the score strings on the python/c api
-  std::string depletion_reactions = {"(n,fission)","(n,2n)","(n,3n)","(n,4n)","(n,p)","(n,a)","(n,gamma)"};
-  name_ = object_name(group).substr(1);
+  std::string depletion_reactions[7] = {"fission","(n,2n)","(n,3n)","(n,4n)","(n,p)","(n,a)","(n,gamma)"};
+  std::string name_ = object_name(group).substr(1);
   hid_t rxs_group = open_group(group, "reactions");
   for (auto irx : depletion_reactions) {
       hid_t rx_group = open_group(rxs_group, irx.c_str());
       HybridReactions_.push_back(std::make_unique<HybridReaction>(rx_group));
-      close(rx_group);
-  close(rxs_group);
+      close_group(rx_group);
 }
+  close_group(rxs_group);
 }
 
 
@@ -33,7 +36,7 @@ hybrid::hybrid(hid_t group):
 // Non-member functions
 //========================================================================
 
-void check_hybrid_version(hid_t file)
+void check_hybrid_version(hid_t file_id)
 
 {
   if (attribute_exists(file_id, "version")) {
@@ -66,11 +69,11 @@ void read_hybrid_data(int i_nuclide)
   std::string& filename = data::libraries[idx].path_;
 
   // Display message
-  write_message("Reading " + nuc->name_ + " MG data from " + filename, 6);
+  write_message("Reading " + nuc->name_ + " hybrid data from " + filename, 6);
 
   // Open file and make sure version is sufficient
   hid_t file = file_open(filename, 'r');
-  check_mg_version(file);
+  check_hybrid_version(file);
 
   // Read nuclide data from HDF5
   hid_t group = open_group(file, nuc->name_.c_str());

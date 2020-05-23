@@ -207,6 +207,7 @@ list(APPEND libopenmc_SOURCES
   src/mgxs.cpp
   src/mgxs_interface.cpp
   src/nuclide.cpp
+  src/hybrid.cpp
   src/output.cpp
   src/particle.cpp
   src/particle_restart.cpp
@@ -220,6 +221,7 @@ list(APPEND libopenmc_SOURCES
   src/random_lcg.cpp
   src/reaction.cpp
   src/reaction_product.cpp
+  src/hybrid_reaction.cpp
   src/scattdata.cpp
   src/secondary_correlated.cpp
   src/secondary_kalbach.cpp

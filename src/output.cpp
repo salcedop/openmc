@@ -22,6 +22,7 @@
 #include "openmc/eigenvalue.h"
 #include "openmc/error.h"
 #include "openmc/geometry.h"
+#include "openmc/material.h"
 #include "openmc/lattice.h"
 #include "openmc/math_functions.h"
 #include "openmc/message_passing.h"
@@ -525,46 +526,82 @@ void collapse(){
   int stride_results;
   int n_nuclide_bins;
   int threshold;
-  const auto& flux_tally {*model::tallies[0]};
-  const auto& reaction_rate_tally {*model::tallies[1]};
+  int mat_id;
+  int s_index;
+  int inuc_local_index;
+  int inuc_global_index;
+  double density;
+  double running_sum;
+  
+  const auto& flux_tally {*model::tallies[1]};
+  const auto& reaction_rate_tally {*model::tallies[0]};
   // second dimension corresponds to total number of nuclides in long-depletion chain.
   // there are actually 422 ut Be7 was removed from both the 'chain.xml' and 'cross_sections_hybrid.xml'
   // files.
   xt::xtensor<double, 3> hybrid_tallies;
   n_nuclide_bins = reaction_rate_tally.nuclides_.size();
 
-  for (int i=0 ; i < n_fuel ; ++i){
+  hybrid_tallies = xt::empty<double>({1,n_nuclide_bins, 7});
+  int k_to_save=0;
+  for (int i=0 ; i < settings::n_fuel ; ++i){
     //since we are tallying 7 reaction rates for each nuclide
     //we need 
-    stride_results = i * 421;
-    mat_id = model::fuel_map.find(i); 
-    auto mat = model::materials[mat_id];
+    stride_results = i * n_nuclide_bins;
+    auto mat_id_pair = model::fuel_map.find(i+1);
+    int mat_index = model::material_map[mat_id_pair->second];
+    const auto& mat {model::materials[mat_index]};
     //pointer to material array.
     //
     //determine in:w    
     for (int j=0; j < n_nuclide_bins; ++j){
       //inuc_global_index = t1 % nuclide_bins(j);
       inuc_global_index = reaction_rate_tally.nuclides_[j];
-      auto inuc = data::nuclides[inuc_global_index];
-      inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
-      density = mat->atom_density[inuc_local_index];
+      /*
+      for (auto a : mat->mat_nuclide_index_) {
+            std::cout << a <<std::endl; 
+      }
+      */
+      //auto pp = model::materials[mat_id_pair->second]->mat_nuclide_index_.size();
+      //std::cout << " size index mapper: " << pp << std::endl;
+      auto inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
+      //inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
+      
+      //density = model::materials[mat_id_pair->second]->atom_density_[inuc_local_index];
+      if (inuc_local_index == 0){
+          continue;
+      } 
+      density = mat->atom_density_[inuc_local_index];
+      std::string nuc_name = data::nuclides[inuc_global_index]->name_;
+      if (nuc_name == "Np238"){
+         s_index = j;
+      }
       for (int k=0; k < 7; ++k){
-        running_sum = ZERO;
-        auto xs = inuc->hybrid->HybridReaction[k]->xs;
+        if ((j == s_index) && (k==k_to_save)){
+      std::cout << "(nuc,dens, rxn) (" << data::nuclides[inuc_global_index]->name_ << ","<<density<<","<<k<<")"<<std::endl;}
+        running_sum = 0.00;
+        auto xs = data::nuclides[inuc_global_index]->hybrid_->HybridReactions_[k]->xs_;
         threshold = xs.threshold;
-        for (int z =  threshold; z < xs.size(); ++z){
+        //std::cout<< "th : "<< threshold << std::endl;
+        for (int z =  threshold; z < xs.value.size(); ++z){
+        if ((j == s_index) && (k==k_to_save)){
+        std::cout<< "xs["<< z << " - 1]: "<< xs.value[z-1] << std::endl;
+        }
           if (threshold == 0){
-            //running_sum = ZERO;
             break;
           }
           else {
-            running_sum = running_sum + xs.value(z) + flux_tally[z-1+stride_results,0,0];
+              if ((j == s_index) && (k==k_to_save)){
+              std::cout<< "flux_tally["<< z << " - 1 + "<<stride_results<<"]: "<< flux_tally.results_(z-1+stride_results,0,RESULT_SUM)/flux_tally.n_realizations_ << std::endl;
+               }
+              running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM) / flux_tally.n_realizations_;
           }
         }
-          hybrid_tally[i,j,k] = running_sum * density;
+          
+          hybrid_tallies(i,j,k) = running_sum * density;
        }
      }
-    }        
+    } 
+   std::cout << "0,"<<s_index<<","<<k_to_save<<": " << hybrid_tallies(0,s_index,k_to_save) << std::endl;       
 }
 //==============================================================================
 

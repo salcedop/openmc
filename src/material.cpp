@@ -50,6 +50,7 @@ std::unordered_map<int32_t, int32_t> fuel_map;
 Material::Material(pugi::xml_node node)
   : index_{model::materials.size()}
 {
+  //auto n_fuel = settings::n_fuel;
   if (check_for_node(node, "id")) {
     this->set_id(std::stoi(get_node_value(node, "id")));
   } else {
@@ -62,9 +63,11 @@ Material::Material(pugi::xml_node node)
 
   if (check_for_node(node, "depletable")) {
     depletable_ = get_node_value_bool(node, "depletable");
-    n_fuel += 1;
-    model::fuel_map[n_fuel] = id_;
-    std::cout << "num fuels: "<< n_fuel;
+    if (depletable_){
+    settings::n_fuel += 1;
+    model::fuel_map[settings::n_fuel] = id_;
+    std::cout << "num fuels: "<< settings::n_fuel << std::endl;
+    }
   }
 
   bool sum_density {false};

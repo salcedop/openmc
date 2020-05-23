@@ -1,4 +1,4 @@
-//! \file groupr.h
+//! \file hybrid_reaction.h
 //! MG Data for an incident neutron reaction
 
 #ifndef OPENMC_GROUPR_REACTION_H

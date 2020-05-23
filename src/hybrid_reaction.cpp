@@ -13,10 +13,8 @@ namespace openmc {
 //Groupr Reaction implementation
 //==============================================================================
 
-
 HybridReaction::HybridReaction(hid_t rx_group)
 {
-    
     hid_t xs_dataset = open_dataset(rx_group,"groupr");
     read_attribute(rx_group,"start_point",xs_.threshold);
     

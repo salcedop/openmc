@@ -1,8 +1,11 @@
-//! \file nuclide.h
-//! \brief Nuclide type and other associated types/data
+//! \file hybrid.h
+//! \brief Hybrid type and other associated types/data
 
 #ifndef OPENMC_HYBRID_H
 #define OPENMC_HYBRID_H
+
+#include <memory> // for unique_ptr
+#include <vector>
 
 #include <hdf5.h>
 
@@ -11,17 +14,17 @@
 namespace openmc {
 
 //==============================================================================
-// Data for a nuclide
+// Data for a hybrid
 //==============================================================================
 
 class hybrid {
 public:
   // Constructors
   hybrid(hid_t group);
-
-
-  std::vector<std::unique_ptr<HybridReaction>> HybrydReactions_; //!< Reactions
-}
+  //Data members
+  std::string name_;
+  std::vector<std::unique_ptr<HybridReaction>> HybridReactions_; //!< Reactions
+};
 
 //! \param[in] file  HDF5 file object
 void check_hybrid_version(hid_t file);

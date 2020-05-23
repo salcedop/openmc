@@ -124,11 +124,6 @@ int openmc_simulation_finalize()
   simulation::time_active.stop();
   simulation::time_finalize.start();
 
-  // Clear material nuclide mapping
-  for (auto& mat : model::materials) {
-    mat->mat_nuclide_index_.clear();
-  }
-
   // Increment total number of generations
   simulation::total_gen += simulation::current_batch*settings::gen_per_batch;
 
@@ -139,6 +134,11 @@ int openmc_simulation_finalize()
   // Write tally results to tallies.out
   if (settings::hybrid && mpi::master) collapse();
   if (settings::output_tallies && mpi::master) write_tallies();
+
+  // Clear material nuclide mapping
+  for (auto& mat : model::materials) {
+    mat->mat_nuclide_index_.clear();
+  }
 
   #pragma omp parallel
   {

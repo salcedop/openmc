@@ -562,7 +562,6 @@ Tally::set_scores(const std::vector<std::string>& scores)
   // Reset state and prepare for the new scores.
   scores_.clear();
   depletion_rx_ = false;
-  flux_tallies = false;
   scores_.reserve(scores.size());
 
   // Check for the presence of certain restrictive filters.
@@ -1037,7 +1036,6 @@ setup_active_tallies()
 
       // Check if tally contains depletion reactions and if so, set flag
       if (tally.depletion_rx_) simulation::need_depletion_rx = true;
-      if (tally.flux_tallies) simulation::need_flux_tallies = true;
     }
   }
 }

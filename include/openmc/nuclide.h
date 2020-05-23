@@ -14,7 +14,7 @@
 #include "openmc/constants.h"
 #include "openmc/endf.h"
 #include "openmc/particle.h"
-#include "openmc/groupr_reaction.h"
+#include "openmc/hybrid_reaction.h"
 #include "openmc/hybrid.h"
 #include "openmc/reaction.h"
 #include "openmc/reaction_product.h"

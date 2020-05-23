@@ -137,7 +137,7 @@ void read_cross_sections_xml()
           "information on how to set up data libraries.");
       }
       settings::path_cross_sections = envvar;
-      if (setting::hybrid){
+      if (settings::hybrid){
             
         char* hybrid_envvar = std::getenv("OPENMC_HYBRID_CROSS_SECTIONS");
         if (!hybrid_envvar) {
@@ -149,7 +149,7 @@ void read_cross_sections_xml()
           "information on how to set up data libraries.");
         }
         settings::path_cross_sections_hybrid = hybrid_envvar;
-    } else {
+    }} else {
       char* envvar = std::getenv("OPENMC_MG_CROSS_SECTIONS");
       if (!envvar) {
         fatal_error("No mgxs.h5 file was specified in "
@@ -168,8 +168,8 @@ void read_cross_sections_xml()
   // Now that the cross_sections.xml or mgxs.h5 has been located, read it in
   if (settings::run_CE) {
     read_ce_cross_sections_xml();
-    if (setttings::hybrid){
-    read_hybrid_cross_sections_xml()
+    if (settings::hybrid){
+    read_hybrid_cross_sections_xml();
     }
   } else {
     read_mg_cross_sections_header();
@@ -195,7 +195,7 @@ void read_cross_sections_xml()
   }
 }
 
-void
+void 
 read_ce_cross_sections(const std::vector<std::vector<double>>& nuc_temps,
   const std::vector<std::vector<double>>& thermal_temps)
 {
@@ -401,10 +401,10 @@ read_ce_cross_sections(const std::vector<std::vector<double>>& nuc_temps,
 void read_hybrid_cross_sections_xml()
 {
   // Check if cross_sections.xml exists
-  const auto& filename_hyrbid = settings::path_cross_sections_hybrid;
+  const auto& filename_hybrid = settings::path_cross_sections_hybrid;
   if (!file_exists(filename_hybrid)) {
     // Could not find cross_sections.xml file
-    fatal_error("Hybrid Cross sections XML file '" + filename +
+    fatal_error("Hybrid Cross sections XML file '" + filename_hybrid +
       "' does not exist.");
   }
 

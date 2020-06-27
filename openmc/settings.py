@@ -161,6 +161,7 @@ class Settings(object):
         # Run mode subelement (default is 'eigenvalue')
         self._run_mode = 'eigenvalue'
         self._batches = None
+        self._hybrid = None
         self._generations_per_batch = None
         self._inactive = None
         self._particles = None
@@ -227,6 +228,10 @@ class Settings(object):
     @property
     def batches(self):
         return self._batches
+    
+    @property
+    def hybrid(self):
+        return self._hybrid
 
     @property
     def generations_per_batch(self):
@@ -370,6 +375,10 @@ class Settings(object):
         cv.check_type('batches', batches, Integral)
         cv.check_greater_than('batches', batches, 0)
         self._batches = batches
+    
+    @hybrid.setter
+    def hybrid(self, hybrid):
+        self._hybrid = hybrid
 
     @generations_per_batch.setter
     def generations_per_batch(self, generations_per_batch):
@@ -697,6 +706,11 @@ class Settings(object):
         if self._batches is not None:
             element = ET.SubElement(root, "batches")
             element.text = str(self._batches)
+    
+    def _create_hybrid_subelement(self, root):
+        if self._hybrid is not None:
+            element = ET.SubElement(root, "hybrid")
+            element.text = str(self._hybrid)
 
     def _create_generations_per_batch_subelement(self, root):
         if self._generations_per_batch is not None:
@@ -935,7 +949,8 @@ class Settings(object):
             self._batches_from_xml_element(elem)
             self._inactive_from_xml_element(elem)
             self._generations_per_batch_from_xml_element(elem)
-
+            self._hybrid_from_xml_element(elem)
+    
     def _run_mode_from_xml_element(self, root):
         text = get_text(root, 'run_mode')
         if text is not None:
@@ -950,6 +965,11 @@ class Settings(object):
         text = get_text(root, 'batches')
         if text is not None:
             self.batches = int(text)
+    
+    def _hybrid_from_xml_element(self, root):
+        text = get_text(root, 'hybrid')
+        if text is not None:
+            self.hybrid = int(text)
 
     def _inactive_from_xml_element(self, root):
         text = get_text(root, 'inactive')
@@ -1174,6 +1194,7 @@ class Settings(object):
         self._create_run_mode_subelement(root_element)
         self._create_particles_subelement(root_element)
         self._create_batches_subelement(root_element)
+        self._create_hybrid_subelement(root_element)
         self._create_inactive_subelement(root_element)
         self._create_generations_per_batch_subelement(root_element)
         self._create_keff_trigger_subelement(root_element)
@@ -1240,6 +1261,7 @@ class Settings(object):
         settings._run_mode_from_xml_element(root)
         settings._particles_from_xml_element(root)
         settings._batches_from_xml_element(root)
+        settings._hybrid_from_xml_element(root)
         settings._inactive_from_xml_element(root)
         settings._generations_per_batch_from_xml_element(root)
         settings._keff_trigger_from_xml_element(root)

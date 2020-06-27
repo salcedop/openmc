@@ -6,7 +6,9 @@
 
 #include <memory> // for unique_ptr
 #include <vector>
-
+#include "xtensor/xfixed.hpp"
+#include "xtensor/xtensor.hpp"
+#include "simulation.h"
 #include <hdf5.h>
 
 #include "openmc/hybrid_reaction.h"
@@ -18,6 +20,7 @@ namespace openmc {
 //==============================================================================
 
 class hybrid {
+
 public:
   // Constructors
   hybrid(hid_t group);
@@ -34,6 +37,13 @@ void check_hybrid_version(hid_t file);
 //!
 //! \param[in] i_nuclide  Index in global nuclides array
 void read_hybrid_data(int i_nuclide);
+
+
+//! hybrid tallies result
+
+namespace simulation{
+extern xt::xtensor<double, 3> hybrid_tallies_;
+}
 
 
 

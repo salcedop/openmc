@@ -1389,6 +1389,7 @@ openmc_tally_results(int32_t index, double** results, size_t* shape)
   return 0;
 }
 
+
 extern "C" int
 openmc_global_tallies(double** ptr)
 {

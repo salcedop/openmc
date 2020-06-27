@@ -112,6 +112,7 @@ extern "C" {
   int openmc_tally_get_type(int32_t index, int32_t* type);
   int openmc_tally_reset(int32_t index);
   int openmc_tally_results(int32_t index, double** ptr, size_t shape_[3]);
+  int openmc_hybrid_tally_results(double** ptr, size_t shape_[3]);
   int openmc_tally_set_active(int32_t index, bool active);
   int openmc_tally_set_estimator(int32_t index, const char* estimator);
   int openmc_tally_set_filters(int32_t index, size_t n, const int32_t* indices);

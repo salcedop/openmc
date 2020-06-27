@@ -97,6 +97,7 @@ public:
   //! second dimension of the array is for the combination of filters
   //! (e.g. specific cell, specific energy group, etc.)
   xt::xtensor<double, 3> results_;
+  
 
   //----------------------------------------------------------------------------
   // Miscellaneous public members.

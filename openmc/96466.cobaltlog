@@ -1,0 +1,25 @@
+Jobid: 96466
+qsub -I -n 1 -q skylake_8180 -t 200
+Sun May 10 12:54:07 2020 +0000 (UTC) submitted with cwd set to: /home/salcedop/openmc_org/openmc/openmc
+jobid 96466 submitted from terminal /dev/pts/2
+Sun May 10 12:54:42 2020 +0000 (UTC) 
+Sun May 10 12:54:42 2020 +0000 (UTC) Command: '/usr/bin/ssh' 'skylake07' '/usr/libexec/cobalt/cobalt-launcher.py' '--nf' '/var/tmp/cobalt.96466' '--jobid' '96466' '--cwd' '/home/salcedop/openmc_org/openmc/openmc' '--env' 'COBALT_JOBID=96466' '/bin/sleep' '12000'
+Sun May 10 12:54:42 2020 +0000 (UTC) 
+Sun May 10 12:54:42 2020 +0000 (UTC) Environment:
+Sun May 10 12:54:42 2020 +0000 (UTC) SHELL=/bin/bash
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_NODEFILE=/tmp/tmpJcsbXd
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_PARTNAME=skylake07
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_JOBID=96466
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_STARTTIME=1589115256
+Sun May 10 12:54:42 2020 +0000 (UTC) LOGNAME=salcedop
+Sun May 10 12:54:42 2020 +0000 (UTC) USER=salcedop
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_ENDTIME=1589127256
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_PARTSIZE=1
+Sun May 10 12:54:42 2020 +0000 (UTC) HOME=/home/salcedop
+Sun May 10 12:54:42 2020 +0000 (UTC) COBALT_JOBSIZE=1
+Sun May 10 12:54:42 2020 +0000 (UTC) 
+Sun May 10 12:54:42 2020 +0000 (UTC) Info: stdin received from /dev/null
+Sun May 10 12:54:42 2020 +0000 (UTC) Info: stdout sent to /home/salcedop/openmc_org/openmc/openmc/96466.output
+Sun May 10 12:54:42 2020 +0000 (UTC) Info: stderr sent to /home/salcedop/openmc_org/openmc/openmc/96466.error
+Sun May 10 12:54:42 2020 +0000 (UTC) 
+Sun May 10 14:29:31 2020 +0000 (UTC) Info: user delete requested with signal SIGTERM by user salcedop

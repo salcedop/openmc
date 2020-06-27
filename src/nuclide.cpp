@@ -929,6 +929,8 @@ extern "C" int openmc_load_nuclide(const char* name)
 
       // Read multipole file into the appropriate entry on the nuclides array
       if (settings::temperature_multipole) read_multipole_data(i_nuclide);
+      // Read hybrid file
+      if (settings::hybrid) read_hybrid_data(i_nuclide);
     } else {
       set_errmsg("Nuclide '" + std::string{name} + "' is not present in library.");
       return OPENMC_E_DATA;

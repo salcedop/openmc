@@ -1,8 +1,8 @@
 //! \file hybrid_reaction.h
 //! MG Data for an incident neutron reaction
 
-#ifndef OPENMC_GROUPR_REACTION_H
-#define OPENMC_GROUPR_REACTION_H
+#ifndef OPENMC_HYBRID_REACTION_H
+#define OPENMC_HYBRID_REACTION_H
 #include <string>
 #include <vector>
 #include "hdf5.h"
@@ -31,4 +31,4 @@ public:
 
 } // namespace openmc
 
-#endif // OPENMC_GROUPR_H
+#endif // OPENMC_HYBRID_REACTION_H

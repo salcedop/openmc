@@ -14,7 +14,7 @@ from .error import _error_handler
 from .filter import _get_filter
 
 
-__all__ = ['Tally', 'tallies', 'global_tallies', 'num_realizations']
+__all__ = ['Tally', 'tallies', 'global_tallies', 'num_realizations','hybrid_tally_results']
 
 # Tally functions
 _dll.openmc_extend_tallies.argtypes = [c_int32, POINTER(c_int32), POINTER(c_int32)]
@@ -60,6 +60,10 @@ _dll.openmc_tally_results.argtypes = [
     c_int32, POINTER(POINTER(c_double)), POINTER(c_size_t*3)]
 _dll.openmc_tally_results.restype = c_int
 _dll.openmc_tally_results.errcheck = _error_handler
+_dll.openmc_hybrid_tally_results.argtypes = [
+    POINTER(POINTER(c_double)), POINTER(c_size_t*3)]
+_dll.openmc_hybrid_tally_results.restype = c_int
+_dll.openmc_hybrid_tally_results.errcheck = _error_handler
 _dll.openmc_tally_set_active.argtypes = [c_int32, c_bool]
 _dll.openmc_tally_set_active.restype = c_int
 _dll.openmc_tally_set_active.errcheck = _error_handler
@@ -137,6 +141,12 @@ def num_realizations():
     """Number of realizations of global tallies."""
     return c_int32.in_dll(_dll, 'n_realizations').value
 
+def hybrid_tally_results():
+    """hybrid tallies' results"""
+    data = POINTER(c_double)()
+    shape = (c_size_t*3)()
+    _dll.openmc_hybrid_tally_results(data, shape)
+    return as_array(data, tuple(shape))
 
 class Tally(_FortranObjectWithID):
     """Tally stored internally.

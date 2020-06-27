@@ -36,7 +36,7 @@ def load_nuclide(name):
 
     """
     _dll.openmc_load_nuclide(name.encode())
-
+    
 
 class Nuclide(_FortranObject):
     """Nuclide stored internally.

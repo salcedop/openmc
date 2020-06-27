@@ -3,14 +3,20 @@
 
 #include <string>
 #include <utility> // for move
-#include "openmc/hybrid_reaction.h"
 
+#include "openmc/capi.h"
 #include "openmc/constants.h"
 #include "openmc/hdf5_interface.h"
 #include "openmc/endf.h"
 #include "openmc/nuclide.h"
 #include "openmc/cross_sections.h"
+#include "openmc/simulation.h"
+
 namespace openmc {
+
+namespace simulation{
+xt::xtensor<double, 3> hybrid_tallies_;
+}
 
 //==============================================================================
 //Groupr Reaction implementation
@@ -57,14 +63,14 @@ void check_hybrid_version(hid_t file_id)
 
 void read_hybrid_data(int i_nuclide)
 {
-  // Look for WMP data in cross_sections.xml
+  // Look for hybrid data in cross_sections.xml
   const auto& nuc {data::nuclides[i_nuclide]};
   auto it = data::library_map.find({Library::Type::hybrid, nuc->name_});
 
-  // If no MG library for this nuclide, just return
+  // If no hybrid library for this nuclide, just return
   if (it == data::library_map.end()) return;
 
-  // Check if WMP library exists
+  // Check if hybrid library exists
   int idx = it->second;
   std::string& filename = data::libraries[idx].path_;
 
@@ -81,6 +87,24 @@ void read_hybrid_data(int i_nuclide)
   close_group(group);
   file_close(file);
 
+}
+
+//==============================================================================
+// C-API function
+//==============================================================================
+
+//! \brief Returns a pointer to the hybrid tally results array along with its shape. This
+//! allows a user to obtain in-memory results for hybri tallies directly in Python.
+extern "C" int
+openmc_hybrid_tally_results(double** h_results, size_t* h_shape)
+{
+  // Set pointer to results and copy shape
+  *h_results = simulation::hybrid_tallies_.data();
+  auto s = simulation::hybrid_tallies_.shape();
+  h_shape[0] = s[0];
+  h_shape[1] = s[1];
+  h_shape[2] = s[2];
+  return 0;
 }
 
 } // end namespace

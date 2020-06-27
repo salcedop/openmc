@@ -31,6 +31,15 @@ from .helpers import (
     DirectReactionRateHelper, ChainFissionHelper, ConstantFissionYieldHelper,
     FissionYieldCutoffHelper, AveragedFissionYieldHelper, EnergyScoreHelper)
 
+#Needs to be updated... The order of depletion reaction rate strings
+#has to match the one in the MG data. In the previous version, the scores 
+#in the tallies was set equal to 'self.chain.reactions' but the 
+#reaction rate string order was the following: '(n,
+depletion_rxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)']
+#from 3-8MeV, O16's (n,alpha) cross-section has multiple resonances.
+#To reduce the error of its (n,alpha) MG rate, the 500 group structure
+#take the 26 peaks of the cross-sections into account to add more groups
+#around those and hence improve the accuracy.
 
 __all__ = ["Operator", "OperatorResult"]
 
@@ -154,7 +163,7 @@ class Operator(TransportOperator):
         "cutoff": FissionYieldCutoffHelper,
     }
 
-    def __init__(self, geometry, settings, chain_file=None, prev_results=None,
+    def __init__(self, geometry, settings, chain_file=None,hybrid = None, Energy_Struc=None,prev_results=None,
                  diff_burnable_mats=False, energy_mode="fission-q",
                  fission_q=None, dilute_initial=1.0e3,
                  fission_yield_mode="constant", fission_yield_opts=None):
@@ -177,6 +186,8 @@ class Operator(TransportOperator):
         self.settings = settings
         self.geometry = geometry
         self.diff_burnable_mats = diff_burnable_mats
+        self.hybrid = hybrid
+        self.energy_struc = Energy_Struc
 
         # Differentiate burnable materials with multiple instances
         if self.diff_burnable_mats:
@@ -467,7 +478,18 @@ class Operator(TransportOperator):
         # Generate tallies in memory
         materials = [openmc.lib.materials[int(i)]
                      for i in self.burnable_mats]
-        self._rate_helper.generate_tallies(materials, self.chain.reactions)
+        
+        if (self.hybrid == True):
+            #check if user provided energy structure
+            if (self.energy_struc == None):
+                raise RuntimeError("Energy structure was not provided, " 
+                                   "hybrid tallies will not be carried out!")
+            self._rate_helper.hybrid_tallies(materials, depletion_rxn,self.energy_struc)
+        
+        else:
+        
+            self._rate_helper.generate_tallies(materials, self.chain.reactions)
+        
         self._energy_helper.prepare(
             self.chain.nuclides, self.reaction_rates.index_nuc, materials)
         # Tell fission yield helper what materials this process is
@@ -612,8 +634,8 @@ class Operator(TransportOperator):
 
         # Form fast map
         nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
-        react_ind = [rates.index_rx[react] for react in self.chain.reactions]
-
+        react_ind = [rates.index_rx[react] for react in depletion_rxn]
+        print(nuclides)
         # Compute fission power
 
         # Keep track of energy produced from all reactions in eV per source
@@ -630,6 +652,21 @@ class Operator(TransportOperator):
 
         fission_ind = rates.index_rx["fission"]
 
+        #if we are using MG-rates, this block will
+        #(1) ensure that we exclude the fission and capture 
+        #rates and pick only the 'threshofd rates' and
+        #(2) save all the hybrids coming from the C++ side
+        #into 'hybrid_results'. 
+        #fission_ind is left out of 'if statement' because it will
+        #used later on to compute the energy  
+        fission_ind = rates.index_rx["fission"]
+        if (self.hybrid == True):
+          gamma_ind = rates.index_rx["(n,gamma)"]
+          exclude_rates = [fission_ind,gamma_ind]
+          #hybrid_results = openmc.capi.hybrid_results()
+        else:
+          exclude_rates = []
+
         # Extract results
         for i, mat in enumerate(self.local_mats):
             # Get tally index
@@ -641,9 +678,9 @@ class Operator(TransportOperator):
             # Get new number densities
             for nuc, i_nuc_results in zip(nuclides, nuc_ind):
                 number[i_nuc_results] = self.number[mat, nuc]
-
+          
             tally_rates = self._rate_helper.get_material_rates(
-                mat_index, nuc_ind, react_ind)
+                mat_index, nuc_ind, react_ind,exclude_rates,hybrid=self.hybrid)
 
             # Compute fission yields for this material
             fission_yields.append(self._yield_helper.weighted_yields(i))

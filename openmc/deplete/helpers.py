@@ -12,7 +12,7 @@ from numpy import dot, zeros, newaxis
 from . import comm
 from openmc.checkvalue import check_type, check_greater_than
 from openmc.lib import (
-    Tally, MaterialFilter, EnergyFilter, EnergyFunctionFilter)
+    Tally, MaterialFilter, EnergyFilter, EnergyFunctionFilter,hybrid_tally_results)
 from .abc import (
     ReactionRateHelper, EnergyHelper, FissionYieldHelper,
     TalliedFissionYieldHelper)
@@ -61,8 +61,45 @@ class DirectReactionRateHelper(ReactionRateHelper):
         self._rate_tally = Tally()
         self._rate_tally.scores = scores
         self._rate_tally.filters = [MaterialFilter(materials)]
+    
+    def hybrid_tallies(self, materials, scores,energy_struc):
+        """Produce one-group reaction rate tally
 
-    def get_material_rates(self, mat_id, nuc_index, react_index):
+        Uses the :mod:`openmc.lib` to generate a tally
+        of relevant reactions across all burnable materials.
+
+        Parameters
+        ----------
+        materials : iterable of :class:`openmc.Material`
+            Burnable materials in the problem. Used to
+            construct a :class:`openmc.MaterialFilter`
+        scores : iterable of str
+        energy_struc : iterable of doubles
+            energy structure to create the energy
+            filter
+        """
+
+        """Generates depletion tallies.
+        Using information from the depletion chain as well as the nuclides
+        currently in the problem, this function automatically generates a
+        tally.xml for the simulation.
+        """
+      
+        mat_filter = [MaterialFilter(materials)]
+        energy_filter = [EnergyFilter(energy_struc)]
+        # Set up a tally that has a material filter covering each depletable
+        # material and scores corresponding to all reactions that cause
+        # transmutation. The nuclides for the tally are set later when eval() is
+        # called.
+        self._rate_tally = Tally()
+        self._rate_tally.scores = scores
+        self._rate_tally.filters = [MaterialFilter(materials)]
+       
+        self._hybrid_tally = Tally()
+        self._hybrid_tally.scores = ['flux']
+        self._hybrid_tally.filters =  [MaterialFilter(materials),EnergyFilter(energy_struc)]
+        
+    def get_material_rates(self, mat_id, nuc_index, react_index, exclude_rates, hybrid=None):
         """Return an array of reaction rates for a material
 
         Parameters
@@ -74,6 +111,11 @@ class DirectReactionRateHelper(ReactionRateHelper):
             desired reaction rate matrix
         react_index : iterable of int
             Index for each reaction scored in the tally
+        hybrid : bool
+            whether we are doing hybrid tallies.
+        exclude_rates : iterable of int
+            Reaction index that will not be fetched from 
+            hybrid tallies.
 
         Returns
         -------
@@ -83,10 +125,21 @@ class DirectReactionRateHelper(ReactionRateHelper):
         """
         self._results_cache.fill(0.0)
         full_tally_res = self._rate_tally.results[mat_id, :, 1]
+        if (hybrid):
+            hybrid_tally_res = hybrid_tally_results()
         for i_tally, (i_nuc, i_react) in enumerate(
                 product(nuc_index, react_index)):
-            self._results_cache[i_nuc, i_react] = full_tally_res[i_tally]
+            if (i_react not in exclude_rates):
+               if (hybrid):
+                   self._results_cache[i_nuc,i_react] = hybrid_tally_res[mat_id,i_nuc,i_react]
+            else:
+               self._results_cache[i_nuc, i_react] = full_tally_res[i_tally]
 
+            print(i_nuc)
+            print(i_react)
+            print(full_tally_res[i_tally])
+            print("MC-->MG")
+            print(hybrid_tally_res[mat_id,i_nuc,i_react])
         return self._results_cache
 
 

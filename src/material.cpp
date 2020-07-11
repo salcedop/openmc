@@ -40,7 +40,7 @@ namespace model {
 std::vector<std::unique_ptr<Material>> materials;
 std::unordered_map<int32_t, int32_t> material_map;
 std::unordered_map<int32_t, int32_t> fuel_map;
-
+std::unordered_map<std::string, int> depl_nuc_index;
 } // namespace model
 
 //==============================================================================
@@ -337,6 +337,7 @@ Material::Material(pugi::xml_node node)
       thermal_tables_.push_back({index_table, 0, fraction});
     }
   }
+
 }
 
 Material::~Material()
@@ -958,6 +959,8 @@ void Material::set_densities(const std::vector<std::string>& name,
     sum_density += density[i];
   }
 
+  read_chain_xml();
+
   // Set total density to the sum of the vector
   this->set_density(sum_density, "atom/b-cm");
 
@@ -1222,6 +1225,43 @@ void read_materials_xml()
   }
   model::materials.shrink_to_fit();
 }
+
+void read_chain_xml()
+{
+using namespace settings;
+using namespace pugi;
+
+std::string chain_filename = path_input + "chain_endfb71.xml";
+if (!file_exists(chain_filename)){
+  std::stringstream msg;
+  msg << "Chain XML file '"<< chain_filename << "' does not exist";
+  fatal_error(msg);
+}
+
+
+// Parse settings.xml file
+xml_document chain_doc;
+auto chain_result = chain_doc.load_file(chain_filename.c_str());
+if (!chain_result) {
+    fatal_error("Error processing chain_endfb71.xml file.");
+}
+
+// Get root element
+
+xml_node chain_root = chain_doc.document_element();
+int counter = -1;
+for (auto chain_node_nuc : chain_root.children("nuclide")){
+   if(check_for_node(chain_node_nuc,"name")){
+       std::string nuc_name = get_node_value(chain_node_nuc,"name",false,true);
+       if (data::nuclide_map.find(nuc_name) != data::nuclide_map.end()) {
+           counter += 1;
+           model::depl_nuc_index[nuc_name] = counter;
+       } 
+   }
+}
+}
+//using namespace std;
+//std::cout << "counter value : " << counter << std::endl;
 
 void free_memory_material()
 {

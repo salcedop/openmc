@@ -35,7 +35,7 @@ from .helpers import (
 #has to match the one in the MG data. In the previous version, the scores 
 #in the tallies was set equal to 'self.chain.reactions' but the 
 #reaction rate string order was the following: '(n,
-depletion_rxn = ['fission','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)','(n,gamma)']
+depletion_rxn = ['fission','(n,gamma)','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)']
 #from 3-8MeV, O16's (n,alpha) cross-section has multiple resonances.
 #To reduce the error of its (n,alpha) MG rate, the 500 group structure
 #take the 26 peaks of the cross-sections into account to add more groups
@@ -230,7 +230,7 @@ class Operator(TransportOperator):
 
         # Create reaction rates array
         self.reaction_rates = ReactionRates(
-            self.local_mats, self._burnable_nucs, self.chain.reactions)
+            self.local_mats, self._burnable_nucs, depletion_rxn)
 
         # Get classes to assist working with tallies
         self._rate_helper = DirectReactionRateHelper(
@@ -488,7 +488,7 @@ class Operator(TransportOperator):
         
         else:
         
-            self._rate_helper.generate_tallies(materials, self.chain.reactions)
+            self._rate_helper.generate_tallies(materials, depletion_rxn)
         
         self._energy_helper.prepare(
             self.chain.nuclides, self.reaction_rates.index_nuc, materials)
@@ -634,8 +634,8 @@ class Operator(TransportOperator):
 
         # Form fast map
         nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
+        print("nuclide size: "+str(len(nuc_ind)))
         react_ind = [rates.index_rx[react] for react in depletion_rxn]
-        print(nuclides)
         # Compute fission power
 
         # Keep track of energy produced from all reactions in eV per source
@@ -680,7 +680,7 @@ class Operator(TransportOperator):
                 number[i_nuc_results] = self.number[mat, nuc]
           
             tally_rates = self._rate_helper.get_material_rates(
-                mat_index, nuc_ind, react_ind,exclude_rates,hybrid=self.hybrid)
+                nuclides,mat_index, nuc_ind, react_ind,exclude_rates,hybrid=self.hybrid)
 
             # Compute fission yields for this material
             fission_yields.append(self._yield_helper.weighted_yields(i))

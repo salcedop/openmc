@@ -540,13 +540,11 @@ void collapse(){
   const auto& flux_tally {*model::tallies[1]};
   const auto& reaction_rate_tally {*model::tallies[0]};
   // second dimension corresponds to total number of nuclides in long-depletion chain.
-  // there are actually 422 ut Be7 was removed from both the 'chain.xml' and 'cross_sections_hybrid.xml'
+  // there are actually 422 but Be7 was removed from both the 'chain.xml' and 'cross_sections_hybrid.xml'
   // files.
   //xt::xtensor<double, 3> hybrid_tallies;
   n_nuclide_bins = reaction_rate_tally.nuclides_.size();
-  
-  std::cout << "primer reten" << std::endl;
-  
+   
   simulation::hybrid_tallies_ = xt::empty<double>({1,n_nuclides,7});
      
   int k_to_save=0;
@@ -557,29 +555,12 @@ void collapse(){
     auto mat_id_pair = model::fuel_map.find(i+1);
     int mat_index = model::material_map[mat_id_pair->second];
     const auto& mat {model::materials[mat_index]};
-    std::cout << "segundo reten" << std::endl;
-    //pointer to material array.
-    //
-    //determine in:w    
     for (int j=0; j < n_nuclide_bins; ++j){
-      //inuc_global_index = t1 % nuclide_bins(j);
       inuc_global_index = reaction_rate_tally.nuclides_[j];
-      /*
-      for (auto a : mat->mat_nuclide_index_) {
-            std::cout << a <<std::endl; 
-      }
-      */
-      //auto pp = model::materials[mat_id_pair->second]->mat_nuclide_index_.size();
-      //std::cout << " size index mapper: " << pp << std::endl;
       auto inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
-      //inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
-      
-      //density = model::materials[mat_id_pair->second]->atom_density_[inuc_local_index];
-      if (inuc_local_index == 0){
-          continue;
-      } 
       density = mat->atom_density_[inuc_local_index];
       std::string nuc_name = data::nuclides[inuc_global_index]->name_;
+      int chain_index = model::depl_nuc_index[nuc_name];
       if (nuc_name == "Np238"){
          s_index = inuc_global_index;
       }
@@ -590,40 +571,25 @@ void collapse(){
          s_index_2 = inuc_global_index;
       }
       for (int k=0; k < 7; ++k){
-        /*
-        if ((j == s_index) && (k==k_to_save)){
-      std::cout << "(nuc,dens, rxn) (" << data::nuclides[inuc_global_index]->name_ << ","<<density<<","<<k<<")"<<std::endl;}
-        */
         running_sum = 0.00;
         auto xs = data::nuclides[inuc_global_index]->hybrid_->HybridReactions_[k]->xs_;
-        std::cout << "cuarto reten" << std::endl;
         threshold = xs.threshold;
-        //std::cout<< "th : "<< threshold << std::endl;
         for (int z =  threshold; z <= xs.value.size(); ++z){
-        if ((j == s_index) && (k==k_to_save)){
-        std::cout << "quinto reten" << std::endl;
-        std::cout<< "xs["<< z << " - 1]: "<< xs.value[z-1] << std::endl;
-         }
           if (threshold == 0){
             break;
           }
           else {
               
-              if ((j == s_index) && (k==k_to_save)){
-              std::cout<< "flux_tally["<< z << " - 1 + "<<stride_results<<"]: "<< flux_tally.results_(z-1+stride_results,0,RESULT_SUM)/flux_tally.n_realizations_ << std::endl;
-               }
-              //running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM) / flux_tally.n_realizations_;
               running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM);
           }
         }
           
-          std::cout << "x reten, (nuc name,local,global,react,xs): (" <<nuc_name <<"," << inuc_local_index << ","<< inuc_global_index<<","<<k<<","<<running_sum<<")" <<std::endl;
-          simulation::hybrid_tallies_(i,inuc_global_index,k) = running_sum * density;
+          //std::cout << "x reten, (nuc name,chain,local,global,react,xs): (" <<nuc_name <<"," << chain_index <<","<<inuc_local_index << ","<< inuc_global_index<<","<<k<<","<<running_sum*density<<")" <<std::endl;
+          simulation::hybrid_tallies_(i,chain_index,k) = running_sum * density;
        }
      }
     } 
 
-   std::cout << "sexto reten" << std::endl;
    std::cout << "0,"<<s_index<<","<<k_to_save<<": " << simulation::hybrid_tallies_(0,s_index,k_to_save) << std::endl;       
    std::cout << "0,"<<s_index_1<<","<<4<<": " << simulation::hybrid_tallies_(0,s_index_1,4) << std::endl;       
    std::cout << "0,"<<s_index_2<<","<<1<<": " << simulation::hybrid_tallies_(0,s_index_2,1) << std::endl;       

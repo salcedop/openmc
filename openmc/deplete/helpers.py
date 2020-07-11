@@ -99,7 +99,7 @@ class DirectReactionRateHelper(ReactionRateHelper):
         self._hybrid_tally.scores = ['flux']
         self._hybrid_tally.filters =  [MaterialFilter(materials),EnergyFilter(energy_struc)]
         
-    def get_material_rates(self, mat_id, nuc_index, react_index, exclude_rates, hybrid=None):
+    def get_material_rates(self, nuclides, mat_id, nuc_index, react_index, exclude_rates, hybrid=None):
         """Return an array of reaction rates for a material
 
         Parameters
@@ -125,6 +125,8 @@ class DirectReactionRateHelper(ReactionRateHelper):
         """
         self._results_cache.fill(0.0)
         full_tally_res = self._rate_tally.results[mat_id, :, 1]
+        counter = -1
+        counter2 = 0
         if (hybrid):
             hybrid_tally_res = hybrid_tally_results()
         for i_tally, (i_nuc, i_react) in enumerate(
@@ -134,8 +136,13 @@ class DirectReactionRateHelper(ReactionRateHelper):
                    self._results_cache[i_nuc,i_react] = hybrid_tally_res[mat_id,i_nuc,i_react]
             else:
                self._results_cache[i_nuc, i_react] = full_tally_res[i_tally]
-
-            print(i_nuc)
+            counter+=1
+            if (counter == 7):
+               counter = 0
+               counter2 += 1
+            print("inuc: "+str(i_nuc))
+            print("counter: "+str(counter2))
+            print(nuclides[counter2])
             print(i_react)
             print(full_tally_res[i_tally])
             print("MC-->MG")

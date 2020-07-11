@@ -26,7 +26,7 @@ hybrid::hybrid(hid_t group)
 {
    // Read reactions
    // Need them in this order to match the score strings on the python/c api
-  std::string depletion_reactions[7] = {"fission","(n,2n)","(n,3n)","(n,4n)","(n,p)","(n,a)","(n,gamma)"};
+  std::string depletion_reactions[7] = {"fission","(n,gamma)","(n,2n)","(n,3n)","(n,4n)","(n,p)","(n,a)"};
   std::string name_ = object_name(group).substr(1);
   hid_t rxs_group = open_group(group, "reactions");
   for (auto irx : depletion_reactions) {

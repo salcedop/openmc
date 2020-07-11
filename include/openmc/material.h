@@ -27,7 +27,7 @@ namespace model {
 extern std::vector<std::unique_ptr<Material>> materials;
 extern std::unordered_map<int32_t, int32_t> material_map;
 extern std::unordered_map<int32_t, int32_t> fuel_map;
-
+extern std::unordered_map<std::string, int> depl_nuc_index;
 } // namespace model
 
 //==============================================================================
@@ -198,6 +198,8 @@ double density_effect(const std::vector<double>& f, const std::vector<double>&
 
 //! Read material data from materials.xml
 void read_materials_xml();
+
+void read_chain_xml();
 
 void free_memory_material();
 

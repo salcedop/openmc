@@ -36,6 +36,7 @@ from .helpers import (
 #in the tallies was set equal to 'self.chain.reactions' but the 
 #reaction rate string order was the following: '(n,
 depletion_rxn = ['fission','(n,gamma)','(n,2n)','(n,3n)','(n,4n)','(n,p)','(n,a)']
+#depletion_rxn = ['fission','(n,gamma)']
 #from 3-8MeV, O16's (n,alpha) cross-section has multiple resonances.
 #To reduce the error of its (n,alpha) MG rate, the 500 group structure
 #take the 26 peaks of the cross-sections into account to add more groups
@@ -233,8 +234,7 @@ class Operator(TransportOperator):
             self.local_mats, self._burnable_nucs, depletion_rxn)
 
         # Get classes to assist working with tallies
-        self._rate_helper = DirectReactionRateHelper(
-            self.reaction_rates.n_nuc, self.reaction_rates.n_react)
+        self._rate_helper = DirectReactionRateHelper(self.reaction_rates.n_nuc, self.reaction_rates.n_react)
         if energy_mode == "fission-q":
             self._energy_helper = ChainFissionHelper()
         else:
@@ -636,6 +636,7 @@ class Operator(TransportOperator):
         nuc_ind = [rates.index_nuc[nuc] for nuc in nuclides]
         print("nuclide size: "+str(len(nuc_ind)))
         react_ind = [rates.index_rx[react] for react in depletion_rxn]
+        print(react_ind)
         # Compute fission power
 
         # Keep track of energy produced from all reactions in eV per source
@@ -659,7 +660,6 @@ class Operator(TransportOperator):
         #into 'hybrid_results'. 
         #fission_ind is left out of 'if statement' because it will
         #used later on to compute the energy  
-        fission_ind = rates.index_rx["fission"]
         if (self.hybrid == True):
           gamma_ind = rates.index_rx["(n,gamma)"]
           exclude_rates = [fission_ind,gamma_ind]

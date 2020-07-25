@@ -92,7 +92,7 @@ class DirectReactionRateHelper(ReactionRateHelper):
         # transmutation. The nuclides for the tally are set later when eval() is
         # called.
         self._rate_tally = Tally()
-        self._rate_tally.scores = scores
+        self._rate_tally.scores = ['fission','(n,gamma)']
         self._rate_tally.filters = [MaterialFilter(materials)]
        
         self._hybrid_tally = Tally()
@@ -125,28 +125,32 @@ class DirectReactionRateHelper(ReactionRateHelper):
         """
         self._results_cache.fill(0.0)
         full_tally_res = self._rate_tally.results[mat_id, :, 1]
+        i_tally_start = -2
         counter = -1
-        counter2 = 0
         if (hybrid):
-            hybrid_tally_res = hybrid_tally_results()
-        for i_tally, (i_nuc, i_react) in enumerate(
+          hybrid_tally_res = hybrid_tally_results()
+          len_nuc_index = len(nuc_index)
+          rr_tally_index_limit = len_nuc_index * 2
+          print("itallylim "+str(rr_tally_index_limit))
+          for i_nuc in nuc_index:
+            counter += 1
+            i_tally_start += 2
+            for i_react in react_index:
+              if (i_react < 2):
+                self._results_cache[i_nuc, i_react] = full_tally_res[i_tally_start+i_react]
+                print("inuc: "+str(i_nuc))
+                print(nuclides[counter])
+                print(i_react)
+                print(full_tally_res[i_tally_start+i_react])
+                print("MC-->MG")
+                print(hybrid_tally_res[mat_id,i_nuc,i_react])
+              else:
+                self._results_cache[i_nuc, i_react] = hybrid_tally_res[mat_id, i_nuc, i_react]
+       
+        else:
+          for i_tally, (i_nuc, i_react) in enumerate(
                 product(nuc_index, react_index)):
-            if (i_react not in exclude_rates):
-               if (hybrid):
-                   self._results_cache[i_nuc,i_react] = hybrid_tally_res[mat_id,i_nuc,i_react]
-            else:
-               self._results_cache[i_nuc, i_react] = full_tally_res[i_tally]
-            counter+=1
-            if (counter == 7):
-               counter = 0
-               counter2 += 1
-            print("inuc: "+str(i_nuc))
-            print("counter: "+str(counter2))
-            print(nuclides[counter2])
-            print(i_react)
-            print(full_tally_res[i_tally])
-            print("MC-->MG")
-            print(hybrid_tally_res[mat_id,i_nuc,i_react])
+                self._results_cache[i_nuc, i_react] = full_tally_res[i_tally]
         return self._results_cache
 
 

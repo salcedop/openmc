@@ -959,7 +959,7 @@ void Material::set_densities(const std::vector<std::string>& name,
     sum_density += density[i];
   }
 
-  read_chain_xml();
+  if (settings::chain) {read_chain_xml();}
 
   // Set total density to the sum of the vector
   this->set_density(sum_density, "atom/b-cm");

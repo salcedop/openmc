@@ -532,6 +532,7 @@ void collapse(){
   int s_index_2;
   int inuc_local_index;
   int inuc_global_index;
+  int nuclide_index;
   double density;
   double running_sum;
 
@@ -560,7 +561,11 @@ void collapse(){
       auto inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
       density = mat->atom_density_[inuc_local_index];
       std::string nuc_name = data::nuclides[inuc_global_index]->name_;
-      int chain_index = model::depl_nuc_index[nuc_name];
+      if (settings::chain){
+          nuclide_index = model::depl_nuc_index[nuc_name];}
+      else{
+          nuclide_index = inuc_global_index;
+          }
       if (nuc_name == "Np238"){
          s_index = inuc_global_index;
       }
@@ -575,17 +580,21 @@ void collapse(){
         auto xs = data::nuclides[inuc_global_index]->hybrid_->HybridReactions_[k]->xs_;
         threshold = xs.threshold;
         for (int z =  threshold; z <= xs.value.size(); ++z){
+          //threshold == 0 means that the nuclide doesn't have data for this MT.
           if (threshold == 0){
             break;
           }
           else {
-              
+              if (settings::chain){ 
               running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM);
+              }
+              else{
+              running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM) / flux_tally.n_realizations_;}
           }
         }
           
           //std::cout << "x reten, (nuc name,chain,local,global,react,xs): (" <<nuc_name <<"," << chain_index <<","<<inuc_local_index << ","<< inuc_global_index<<","<<k<<","<<running_sum*density<<")" <<std::endl;
-          simulation::hybrid_tallies_(i,chain_index,k) = running_sum * density;
+          simulation::hybrid_tallies_(i,nuclide_index,k) = running_sum * density;
        }
      }
     } 

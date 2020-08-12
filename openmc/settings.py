@@ -162,6 +162,7 @@ class Settings(object):
         self._run_mode = 'eigenvalue'
         self._batches = None
         self._hybrid = None
+        self._chain = None
         self._generations_per_batch = None
         self._inactive = None
         self._particles = None
@@ -232,6 +233,10 @@ class Settings(object):
     @property
     def hybrid(self):
         return self._hybrid
+    
+    @property
+    def chain(self):
+        return self._chain
 
     @property
     def generations_per_batch(self):
@@ -379,6 +384,10 @@ class Settings(object):
     @hybrid.setter
     def hybrid(self, hybrid):
         self._hybrid = hybrid
+    
+    @chain.setter
+    def chain(self, chain):
+        self._chain = chain
 
     @generations_per_batch.setter
     def generations_per_batch(self, generations_per_batch):
@@ -711,6 +720,11 @@ class Settings(object):
         if self._hybrid is not None:
             element = ET.SubElement(root, "hybrid")
             element.text = str(self._hybrid)
+    
+    def _create_chain_subelement(self, root):
+        if self._chain is not None:
+            element = ET.SubElement(root, "chain")
+            element.text = str(self._chain)
 
     def _create_generations_per_batch_subelement(self, root):
         if self._generations_per_batch is not None:
@@ -950,6 +964,7 @@ class Settings(object):
             self._inactive_from_xml_element(elem)
             self._generations_per_batch_from_xml_element(elem)
             self._hybrid_from_xml_element(elem)
+            self._chain_from_xml_element(elem)
     
     def _run_mode_from_xml_element(self, root):
         text = get_text(root, 'run_mode')
@@ -971,6 +986,11 @@ class Settings(object):
         if text is not None:
             self.hybrid = int(text)
 
+    def _chain_from_xml_element(self, root):
+        text = get_text(root, 'chain')
+        if text is not None:
+            self.chain = int(text)
+    
     def _inactive_from_xml_element(self, root):
         text = get_text(root, 'inactive')
         if text is not None:
@@ -1195,6 +1215,7 @@ class Settings(object):
         self._create_particles_subelement(root_element)
         self._create_batches_subelement(root_element)
         self._create_hybrid_subelement(root_element)
+        self._create_chain_subelement(root_element)
         self._create_inactive_subelement(root_element)
         self._create_generations_per_batch_subelement(root_element)
         self._create_keff_trigger_subelement(root_element)
@@ -1262,6 +1283,7 @@ class Settings(object):
         settings._particles_from_xml_element(root)
         settings._batches_from_xml_element(root)
         settings._hybrid_from_xml_element(root)
+        settings._chain_from_xml_element(root)
         settings._inactive_from_xml_element(root)
         settings._generations_per_batch_from_xml_element(root)
         settings._keff_trigger_from_xml_element(root)

@@ -51,6 +51,7 @@ bool output_tallies          {true};
 bool particle_restart_run    {false};
 bool photon_transport        {false};
 bool hybrid                  {false};
+bool chain                   {false};
 bool reduce_tallies          {true};
 bool res_scat_on             {false};
 bool restart_run             {false};

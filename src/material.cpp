@@ -50,7 +50,6 @@ std::unordered_map<std::string, int> depl_nuc_index;
 Material::Material(pugi::xml_node node)
   : index_{model::materials.size()}
 {
-  //auto n_fuel = settings::n_fuel;
   if (check_for_node(node, "id")) {
     this->set_id(std::stoi(get_node_value(node, "id")));
   } else {
@@ -64,9 +63,10 @@ Material::Material(pugi::xml_node node)
   if (check_for_node(node, "depletable")) {
     depletable_ = get_node_value_bool(node, "depletable");
     if (depletable_){
+    // Get a list for all depletable materials. 
+    // This will be useful for the collapse of hybrid tallies.
     settings::n_fuel += 1;
     model::fuel_map[settings::n_fuel] = id_;
-    std::cout << "num fuels: "<< settings::n_fuel << std::endl;
     }
   }
 
@@ -959,6 +959,10 @@ void Material::set_densities(const std::vector<std::string>& name,
     sum_density += density[i];
   }
 
+  //this is only important now to ensure consistency 
+  //between the cpp and python side when we are 
+  //indexing nuclides.
+  
   if (settings::chain) {read_chain_xml();}
 
   // Set total density to the sum of the vector

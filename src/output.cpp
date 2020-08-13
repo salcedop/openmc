@@ -527,81 +527,109 @@ void collapse(){
   int n_nuclide_bins;
   int threshold;
   int mat_id;
-  int s_index;
-  int s_index_1;
-  int s_index_2;
   int inuc_local_index;
   int inuc_global_index;
   int nuclide_index;
+  int flux_tally_energy_bins;
   double density;
   double running_sum;
 
+  //ignore, this is just to debug
+  int ma_index;
+  std::string nuc_to_print;
+  nuc_to_print = "Np238";
+
   int n_nuclides = data::nuclides.size(); 
-  std::cout << "n_nuclides: " << n_nuclides << std::endl;
+  
+  //TODO: there should be some mechanics to ensure
+  //the user has the tallies in this order.
+
   const auto& flux_tally {*model::tallies[1]};
   const auto& reaction_rate_tally {*model::tallies[0]};
-  // second dimension corresponds to total number of nuclides in long-depletion chain.
-  // there are actually 422 but Be7 was removed from both the 'chain.xml' and 'cross_sections_hybrid.xml'
-  // files.
-  //xt::xtensor<double, 3> hybrid_tallies;
-  n_nuclide_bins = reaction_rate_tally.nuclides_.size();
-   
-  simulation::hybrid_tallies_ = xt::empty<double>({1,n_nuclides,7});
+
+  flux_tally_energy_bins = flux_tally.results_.size() / settings::n_fuel / 3;
+  
+  // During the collapse, we loop over the total number of depletable materials,
+  // the nuclide bins in the tally, the seven depletion rates and
+  // the group bounds.
+
+  n_nuclide_bins = reaction_rate_tally.nuclides_.size(); 
+
+  // Even though we are looping over the nuclide bins, we need to ensure
+  // there is enough space for all the nuclides because the number of 
+  // nuclide bins is not constant across all depletion steps.
+  simulation::hybrid_tallies_ = xt::empty<double>({settings::n_fuel,n_nuclides,7});
      
-  int k_to_save=0;
   for (int i=0 ; i < settings::n_fuel ; ++i){
-    //since we are tallying 7 reaction rates for each nuclide
-    //we need 
-    stride_results = i * n_nuclide_bins;
+    
+    //stride into the flux tally results
+    //only useful if running a problem 
+    //with n_fuel > 1
+    stride_results = i * flux_tally_energy_bins;
+    
+    //depletable material fuel indexing starts at 1
     auto mat_id_pair = model::fuel_map.find(i+1);
+
     int mat_index = model::material_map[mat_id_pair->second];
+    
     const auto& mat {model::materials[mat_index]};
+    
     for (int j=0; j < n_nuclide_bins; ++j){
+      
+      // Need global index to find nuclide in data::nuclides
       inuc_global_index = reaction_rate_tally.nuclides_[j];
+      
+      // Need local index to find density within the ith depletable material.
       auto inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
       density = mat->atom_density_[inuc_local_index];
+      
+      // Need nuclide name in case we are doing depletion to find
+      // the corresponding nuclide index according to the chain.xml file.
       std::string nuc_name = data::nuclides[inuc_global_index]->name_;
+      
       if (settings::chain){
+          //if we are doing depletion, this will ensure consistency
+          //in the indexing.
           nuclide_index = model::depl_nuc_index[nuc_name];}
       else{
           nuclide_index = inuc_global_index;
           }
-      if (nuc_name == "Np238"){
-         s_index = inuc_global_index;
-      }
-      if (nuc_name == "B10"){
-         s_index_1 = inuc_global_index;
-      }
-      if (nuc_name == "Mg25"){
-         s_index_2 = inuc_global_index;
+      if (nuc_name == nuc_to_print){
+         ma_index = nuclide_index;
       }
       for (int k=0; k < 7; ++k){
+        
+        //Start running sum
         running_sum = 0.00;
+        
+        //Access MG librabry built with NJOY.
         auto xs = data::nuclides[inuc_global_index]->hybrid_->HybridReactions_[k]->xs_;
         threshold = xs.threshold;
+
         for (int z =  threshold; z <= xs.value.size(); ++z){
           //threshold == 0 means that the nuclide doesn't have data for this MT.
           if (threshold == 0){
             break;
           }
           else {
-              if (settings::chain){ 
-              running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM);
-              }
+              if (settings::chain){
+              //this means we are doing depletion and therefore
+              //we don't have to divide by the number of realizations.
+              running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM);}
               else{
               running_sum = running_sum + xs.value[z-1] * flux_tally.results_(z-1+stride_results,0,RESULT_SUM) / flux_tally.n_realizations_;}
           }
-        }
-          
-          //std::cout << "x reten, (nuc name,chain,local,global,react,xs): (" <<nuc_name <<"," << chain_index <<","<<inuc_local_index << ","<< inuc_global_index<<","<<k<<","<<running_sum*density<<")" <<std::endl;
-          simulation::hybrid_tallies_(i,nuclide_index,k) = running_sum * density;
+        } 
+        simulation::hybrid_tallies_(i,nuclide_index,k) = running_sum * density;
        }
      }
-    } 
-
-   std::cout << "0,"<<s_index<<","<<k_to_save<<": " << simulation::hybrid_tallies_(0,s_index,k_to_save) << std::endl;       
-   std::cout << "0,"<<s_index_1<<","<<4<<": " << simulation::hybrid_tallies_(0,s_index_1,4) << std::endl;       
-   std::cout << "0,"<<s_index_2<<","<<1<<": " << simulation::hybrid_tallies_(0,s_index_2,1) << std::endl;       
+    }
+    
+    //sanity check for now. print random nuclide and compare hybrid tallies results
+    //with what you have in the xml.
+    for (int reac=0; reac < 7 ; ++reac){
+      std::cout << simulation::hybrid_tallies_(0,ma_index,reac) << std::endl;
+   }
 }
 //==============================================================================
 

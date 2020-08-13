@@ -62,7 +62,7 @@ class DirectReactionRateHelper(ReactionRateHelper):
         self._rate_tally.scores = scores
         self._rate_tally.filters = [MaterialFilter(materials)]
     
-    def hybrid_tallies(self, materials, scores,energy_struc):
+    def hybrid_tallies(self, materials,energy_struc):
         """Produce one-group reaction rate tally
 
         Uses the :mod:`openmc.lib` to generate a tally
@@ -79,18 +79,15 @@ class DirectReactionRateHelper(ReactionRateHelper):
             filter
         """
 
-        """Generates depletion tallies.
-        Using information from the depletion chain as well as the nuclides
-        currently in the problem, this function automatically generates a
-        tally.xml for the simulation.
+        """Generates hybrid tallies. We need two filters:
+           (1) material and (2) energy filter. Energy filter is used to
+           tally the flux and it should be built with the same 
+           structure that was used to generate the cross-section.
         """
       
         mat_filter = [MaterialFilter(materials)]
         energy_filter = [EnergyFilter(energy_struc)]
-        # Set up a tally that has a material filter covering each depletable
-        # material and scores corresponding to all reactions that cause
-        # transmutation. The nuclides for the tally are set later when eval() is
-        # called.
+        # We only need to tally fission and capture
         self._rate_tally = Tally()
         self._rate_tally.scores = ['fission','(n,gamma)']
         self._rate_tally.filters = [MaterialFilter(materials)]
@@ -99,7 +96,7 @@ class DirectReactionRateHelper(ReactionRateHelper):
         self._hybrid_tally.scores = ['flux']
         self._hybrid_tally.filters =  [MaterialFilter(materials),EnergyFilter(energy_struc)]
         
-    def get_material_rates(self, nuclides, mat_id, nuc_index, react_index, exclude_rates, hybrid=None):
+    def get_material_rates(self, mat_id, nuc_index, react_index, hybrid=None):
         """Return an array of reaction rates for a material
 
         Parameters
@@ -113,10 +110,7 @@ class DirectReactionRateHelper(ReactionRateHelper):
             Index for each reaction scored in the tally
         hybrid : bool
             whether we are doing hybrid tallies.
-        exclude_rates : iterable of int
-            Reaction index that will not be fetched from 
-            hybrid tallies.
-
+        
         Returns
         -------
         rates : numpy.ndarray
@@ -125,29 +119,26 @@ class DirectReactionRateHelper(ReactionRateHelper):
         """
         self._results_cache.fill(0.0)
         full_tally_res = self._rate_tally.results[mat_id, :, 1]
-        i_tally_start = -2
-        counter = -1
+        #the indexing gets a bit convoluted here because 'self._results_cache'
+        #is expecting 7 rates but only 2 of them are coming from the 
+        #reaction rate tally.
         if (hybrid):
+          i_tally_start = -2
           hybrid_tally_res = hybrid_tally_results()
-          len_nuc_index = len(nuc_index)
-          rr_tally_index_limit = len_nuc_index * 2
-          print("itallylim "+str(rr_tally_index_limit))
           for i_nuc in nuc_index:
-            counter += 1
             i_tally_start += 2
             for i_react in react_index:
               if (i_react < 2):
                 self._results_cache[i_nuc, i_react] = full_tally_res[i_tally_start+i_react]
-                print("inuc: "+str(i_nuc))
-                print(nuclides[counter])
-                print(i_react)
+                print("nuc "+str(i_nuc))
                 print(full_tally_res[i_tally_start+i_react])
-                print("MC-->MG")
-                print(hybrid_tally_res[mat_id,i_nuc,i_react])
+                print("--------------------")
+                print( hybrid_tally_res[mat_id, i_nuc, i_react])
               else:
                 self._results_cache[i_nuc, i_react] = hybrid_tally_res[mat_id, i_nuc, i_react]
        
         else:
+          #no hybrids
           for i_tally, (i_nuc, i_react) in enumerate(
                 product(nuc_index, react_index)):
                 self._results_cache[i_nuc, i_react] = full_tally_res[i_tally]

@@ -378,6 +378,11 @@ void read_settings_xml()
   if (check_for_node(root, "hybrid")) {
     hybrid = get_node_value_bool(root, "hybrid");
   }
+  
+  // Check for chain.xml (useful during depletion)
+  if (check_for_node(root, "chain")) {
+    chain = get_node_value_bool(root, "chain");
+  }
 
   // Number of bins for logarithmic grid
   if (check_for_node(root, "log_grid_bins")) {

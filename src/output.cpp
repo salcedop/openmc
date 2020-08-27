@@ -533,7 +533,7 @@ void collapse(){
   int flux_tally_energy_bins;
   double density;
   double running_sum;
-
+  int c;
   //ignore, this is just to debug
   int ma_index;
   std::string nuc_to_print;
@@ -552,13 +552,12 @@ void collapse(){
   // During the collapse, we loop over the total number of depletable materials,
   // the nuclide bins in the tally, the seven depletion rates and
   // the group bounds.
-
   n_nuclide_bins = reaction_rate_tally.nuclides_.size(); 
 
   // Even though we are looping over the nuclide bins, we need to ensure
   // there is enough space for all the nuclides because the number of 
   // nuclide bins is not constant across all depletion steps.
-  simulation::hybrid_tallies_ = xt::empty<double>({settings::n_fuel,n_nuclides,7});
+  simulation::hybrid_tallies_ = xt::zeros<double>({settings::n_fuel,n_nuclides,7});
      
   for (int i=0 ; i < settings::n_fuel ; ++i){
     
@@ -581,11 +580,24 @@ void collapse(){
       
       // Need local index to find density within the ith depletable material.
       auto inuc_local_index = mat->mat_nuclide_index_[inuc_global_index];
-      density = mat->atom_density_[inuc_local_index];
       
       // Need nuclide name in case we are doing depletion to find
       // the corresponding nuclide index according to the chain.xml file.
       std::string nuc_name = data::nuclides[inuc_global_index]->name_;
+      
+      // if inuc_local_index == 0 this means 
+      // that material i doesn't have that nuclide.
+      // at any given depletion step it is possible that
+      // some fuel materials will not contain all of the 
+      // nuclides in the tally nuclide bins.
+      if (inuc_local_index == C_NONE){
+         c += 1;
+         std::cout << "from id " << i << std::endl;
+         std::cout << "skipped nuclide "<< nuc_name << std::endl;
+         continue;
+      }
+
+      density = mat->atom_density_[inuc_local_index];
       
       if (settings::chain){
           //if we are doing depletion, this will ensure consistency
@@ -595,7 +607,8 @@ void collapse(){
           nuclide_index = inuc_global_index;
           }
       if (nuc_name == nuc_to_print){
-         ma_index = nuclide_index;
+         if (i==0){
+         ma_index = nuclide_index;}
       }
       for (int k=0; k < 7; ++k){
         
@@ -628,8 +641,11 @@ void collapse(){
     //sanity check for now. print random nuclide and compare hybrid tallies results
     //with what you have in the xml.
     for (int reac=0; reac < 7 ; ++reac){
-      std::cout << simulation::hybrid_tallies_(0,ma_index,reac) << std::endl;
+      std::cout << simulation::hybrid_tallies_(58,ma_index,reac) << std::endl;
+      std::cout << simulation::hybrid_tallies_(101,ma_index,reac) << std::endl;
+      std::cout << simulation::hybrid_tallies_(263,ma_index,reac) << std::endl;
    }
+   std::cout << "total mats that skipped " << c << std::endl;
 }
 //==============================================================================
 

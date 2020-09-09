@@ -67,6 +67,7 @@ class XsData {
     // [angle][incoming group]
     xt::xtensor<double, 2> total;
     xt::xtensor<double, 2> absorption;
+    xt::xtensor<double, 2> capture;
     xt::xtensor<double, 2> nu_fission;
     xt::xtensor<double, 2> prompt_nu_fission;
     xt::xtensor<double, 2> kappa_fission;

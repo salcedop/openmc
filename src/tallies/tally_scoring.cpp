@@ -603,6 +603,13 @@ score_general_ce(Particle* p, int i_tally, int start_index,
       }
       break;
 
+    case N_GAMMA:
+      if (i_nuclide >= 0) {
+          score = p->neutron_xs_[i_nuclide].capture * atom_density * flux;
+        } else {
+          score = p->macro_xs_.capture * flux;
+        }
+        break;
 
     case SCORE_FISSION:
       if (p->macro_xs_.absorption == 0) continue;
@@ -1170,11 +1177,11 @@ score_general_ce(Particle* p, int i_tally, int start_index,
       score = score_fission_q(p, score_bin, tally, flux, i_nuclide, atom_density);
       break;
 
-
+      
     case N_2N:
     case N_3N:
     case N_4N:
-    case N_GAMMA:
+    //case N_GAMMA:
     case N_P:
     case N_A:
       if (tally.estimator_ == ESTIMATOR_ANALOG) {
@@ -1184,7 +1191,7 @@ score_general_ce(Particle* p, int i_tally, int start_index,
       } else {
         int m;
         switch (score_bin) {
-        case N_GAMMA: m = 0; break;
+        //case N_GAMMA: m = 0; break;
         case N_P: m = 1; break;
         case N_A: m = 2; break;
         case N_2N: m = 3; break;
@@ -1558,6 +1565,13 @@ score_general_mg(const Particle* p, int i_tally, int start_index,
       }
       break;
 
+    case N_GAMMA:
+      if (i_nuclide >= 0) {
+          score = p->neutron_xs_[i_nuclide].capture * atom_density * flux;
+        } else {
+          score = p->macro_xs_.capture * flux;
+        }
+        break;
 
     case SCORE_FISSION:
       if (tally.estimator_ == ESTIMATOR_ANALOG) {

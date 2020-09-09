@@ -45,6 +45,7 @@ int Nuclide::XS_ABSORPTION {1};
 int Nuclide::XS_FISSION {2};
 int Nuclide::XS_NU_FISSION {3};
 int Nuclide::XS_PHOTON_PROD {4};
+int Nuclide::XS_CAPTURE {5};
 
 Nuclide::Nuclide(hid_t group, const std::vector<double>& temperature, int i_nuclide)
   : i_nuclide_{i_nuclide}
@@ -273,7 +274,7 @@ void Nuclide::create_derived()
 {
   for (const auto& grid : grid_) {
     // Allocate and initialize cross section
-    std::array<size_t, 2> shape {grid.energy.size(), 5};
+    std::array<size_t, 2> shape {grid.energy.size(), 6};
     xs_.emplace_back(shape, 0.0);
   }
 
@@ -310,6 +311,16 @@ void Nuclide::create_derived()
       auto absorption = xt::view(xs_[t], xt::range(j,j+n), XS_ABSORPTION);
       if (is_disappearance(rx->mt_)) {
         absorption += xs;
+      }
+
+
+      // Add contribution to absorption cross section
+      auto capture = xt::view(xs_[t], xt::range(j,j+n), XS_CAPTURE);
+      if (rx->mt_==N_GAMMA) {
+         if ((name_ == "He3") || (name_ == "Be7") || (name_ == "H3") || (name_ == "He4")){
+            capture = 0;}
+         else{
+            capture = xs;}
       }
 
       if (is_fission(rx->mt_)) {
@@ -531,7 +542,7 @@ void Nuclide::calculate_xs(int i_sab, int i_log_union, double sab_frac, Particle
 
     if (simulation::need_depletion_rx) {
       // Only non-zero reaction is (n,gamma)
-      micro.reaction[0] = sig_a - sig_f;
+      micro.capture = sig_a - sig_f;
 
       // Set all other reaction cross sections to zero
       for (int i = 1; i < DEPLETION_RX.size(); ++i) {
@@ -623,8 +634,12 @@ void Nuclide::calculate_xs(int i_sab, int i_log_union, double sab_frac, Particle
 
     // Calculate microscopic nuclide absorption cross section
     micro.absorption = (1.0 - f)*xs(i_grid, XS_ABSORPTION)
-      + f*xs(i_grid + 1, XS_ABSORPTION);
-
+           + f*xs(i_grid + 1, XS_ABSORPTION);
+    
+    // Calculate microscopic nuclide capture cross section
+    micro.capture = (1.0 - f)*xs(i_grid, XS_CAPTURE)
+           + f*xs(i_grid + 1, XS_CAPTURE);
+      
     if (fissionable_) {
       // Calculate microscopic nuclide total cross section
       micro.fission = (1.0 - f)*xs(i_grid, XS_FISSION)
@@ -649,7 +664,7 @@ void Nuclide::calculate_xs(int i_sab, int i_log_union, double sab_frac, Particle
         xs_i = 0.0;
       }
 
-      for (int j = 0; j < DEPLETION_RX.size(); ++j) {
+      for (int j = 1; j < DEPLETION_RX.size(); ++j) {
         // If reaction is present and energy is greater than threshold, set the
         // reaction xs appropriately
         int i_rx = reaction_index_[DEPLETION_RX[j]];

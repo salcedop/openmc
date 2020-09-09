@@ -110,6 +110,7 @@ private:
   static int XS_FISSION;
   static int XS_NU_FISSION;
   static int XS_PHOTON_PROD;
+  static int XS_CAPTURE;
 };
 
 //==============================================================================

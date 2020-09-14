@@ -747,6 +747,7 @@ void Material::calculate_xs(Particle& p) const
   // Set all material macroscopic cross sections to zero
   p.macro_xs_.total = 0.0;
   p.macro_xs_.absorption = 0.0;
+  p.macro_xs_.gamma = 0.0;
   p.macro_xs_.fission = 0.0;
   p.macro_xs_.nu_fission = 0.0;
 
@@ -822,6 +823,7 @@ void Material::calculate_neutron_xs(Particle& p) const
     // Add contributions to cross sections
     p.macro_xs_.total += atom_density * micro.total;
     p.macro_xs_.absorption += atom_density * micro.absorption;
+    p.macro_xs_.gamma += atom_density * micro.gamma;
     p.macro_xs_.fission += atom_density * micro.fission;
     p.macro_xs_.nu_fission += atom_density * micro.nu_fission;
   }

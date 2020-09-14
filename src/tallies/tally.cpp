@@ -82,6 +82,9 @@ score_str_to_int(std::string score_str)
 
   if (score_str == "absorption")
     return SCORE_ABSORPTION;
+  
+  if (score_str == "(n,gamma)")
+    return N_GAMMA;
 
   if (score_str == "fission" || score_str == "18")
     return SCORE_FISSION;
@@ -174,8 +177,6 @@ score_str_to_int(std::string score_str)
     return N_N1;
   if (score_str == "(n,nc)")
     return N_NC;
-  if (score_str == "(n,gamma)")
-    return N_GAMMA;
   if (score_str == "(n,p)")
     return N_P;
   if (score_str == "(n,d)")
@@ -635,7 +636,7 @@ Tally::set_scores(const std::vector<std::string>& scores)
     case N_2N:
     case N_3N:
     case N_4N:
-    case N_GAMMA:
+    //case N_GAMMA:
     case N_P:
     case N_A:
       depletion_rx_ = true;

@@ -640,12 +640,14 @@ void collapse(){
     
     //sanity check for now. print random nuclide and compare hybrid tallies results
     //with what you have in the xml.
+    /*
     for (int reac=0; reac < 7 ; ++reac){
       std::cout << simulation::hybrid_tallies_(58,ma_index,reac) << std::endl;
       std::cout << simulation::hybrid_tallies_(101,ma_index,reac) << std::endl;
       std::cout << simulation::hybrid_tallies_(263,ma_index,reac) << std::endl;
    }
    std::cout << "total mats that skipped " << c << std::endl;
+   */
 }
 //==============================================================================
 

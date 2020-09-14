@@ -97,6 +97,8 @@ std::string reaction_name(int mt)
     return "nu-scatter";
   } else if (mt == SCORE_ABSORPTION) {
     return "absorption";
+  } else if (mt == N_GAMMA) {
+    return "(n,gamma)";
   } else if (mt == SCORE_FISSION) {
     return "fission";
   } else if (mt == SCORE_NU_FISSION) {
@@ -183,8 +185,6 @@ std::string reaction_name(int mt)
     return "(n,nc)";
   } else if (mt == N_DISAPPEAR) {
     return "(n,disappear)";
-  } else if (mt == N_GAMMA) {
-    return "(n,gamma)";
   } else if (mt == N_P) {
     return "(n,p)";
   } else if (mt == N_D) {

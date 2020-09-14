@@ -213,6 +213,7 @@ Particle::transport()
     } else {
       macro_xs_.total      = 0.0;
       macro_xs_.absorption = 0.0;
+      macro_xs_.gamma      = 0.0;
       macro_xs_.fission    = 0.0;
       macro_xs_.nu_fission = 0.0;
     }

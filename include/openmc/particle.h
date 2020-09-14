@@ -68,7 +68,7 @@ struct NuclideMicroXS {
   double absorption;       //!< absorption (disappearance)
   double fission;          //!< fission
   double nu_fission;       //!< neutron production from fission
-  double capture;          //!< 
+  double gamma;          //!< 
   double elastic;          //!< If sab_frac is not 1 or 0, then this value is
                            //!<   averaged over bound and non-bound nuclei
   double thermal;          //!< Bound thermal elastic & inelastic scattering
@@ -119,7 +119,7 @@ struct ElementMicroXS {
 struct MacroXS {
   double total;         //!< macroscopic total xs
   double absorption;    //!< macroscopic absorption xs
-  double capture;    //!< macroscopic absorption xs
+  double gamma;    //!< macroscopic absorption xs
   double fission;       //!< macroscopic fission xs
   double nu_fission;    //!< macroscopic production xs
   double photon_prod;   //!< macroscopic photon production xs

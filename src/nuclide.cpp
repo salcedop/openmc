@@ -315,12 +315,12 @@ void Nuclide::create_derived()
 
 
       // Add contribution to absorption cross section
-      auto capture = xt::view(xs_[t], xt::range(j,j+n), XS_CAPTURE);
-      if (rx->mt_==N_GAMMA) {
+      auto gamma = xt::view(xs_[t], xt::range(j,j+n), XS_CAPTURE);
+      if (rx->mt_ == N_GAMMA) {
          if ((name_ == "He3") || (name_ == "Be7") || (name_ == "H3") || (name_ == "He4")){
-            capture = 0;}
+            gamma = 0.0;}
          else{
-            capture = xs;}
+            gamma = xs;}
       }
 
       if (is_fission(rx->mt_)) {
@@ -542,7 +542,7 @@ void Nuclide::calculate_xs(int i_sab, int i_log_union, double sab_frac, Particle
 
     if (simulation::need_depletion_rx) {
       // Only non-zero reaction is (n,gamma)
-      micro.capture = sig_a - sig_f;
+      micro.gamma = sig_a - sig_f;
 
       // Set all other reaction cross sections to zero
       for (int i = 1; i < DEPLETION_RX.size(); ++i) {
@@ -637,7 +637,7 @@ void Nuclide::calculate_xs(int i_sab, int i_log_union, double sab_frac, Particle
            + f*xs(i_grid + 1, XS_ABSORPTION);
     
     // Calculate microscopic nuclide capture cross section
-    micro.capture = (1.0 - f)*xs(i_grid, XS_CAPTURE)
+    micro.gamma = (1.0 - f)*xs(i_grid, XS_CAPTURE)
            + f*xs(i_grid + 1, XS_CAPTURE);
       
     if (fissionable_) {

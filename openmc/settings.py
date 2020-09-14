@@ -719,12 +719,12 @@ class Settings(object):
     def _create_hybrid_subelement(self, root):
         if self._hybrid is not None:
             element = ET.SubElement(root, "hybrid")
-            element.text = str(self._hybrid)
+            element.text = str(self._hybrid).lower()
     
     def _create_chain_subelement(self, root):
         if self._chain is not None:
             element = ET.SubElement(root, "chain")
-            element.text = str(self._chain)
+            element.text = str(self._chain).lower()
 
     def _create_generations_per_batch_subelement(self, root):
         if self._generations_per_batch is not None:
@@ -984,12 +984,12 @@ class Settings(object):
     def _hybrid_from_xml_element(self, root):
         text = get_text(root, 'hybrid')
         if text is not None:
-            self.hybrid = int(text)
+            self.hybrid = str(text).lower()
 
     def _chain_from_xml_element(self, root):
         text = get_text(root, 'chain')
         if text is not None:
-            self.chain = int(text)
+            self.chain = str(text).lower()
     
     def _inactive_from_xml_element(self, root):
         text = get_text(root, 'inactive')
